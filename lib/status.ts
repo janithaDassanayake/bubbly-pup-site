@@ -66,3 +66,25 @@ export const ACTIVE_STATUSES: AppointmentStatus[] = Object.values(S).filter(
 );
 
 export const ALL_STATUSES = Object.values(S);
+
+// An appointment can be re-scoped — different package, add-ons, date or time —
+// right up until the money is settled or the visit is over.
+//
+// Why this matters: a customer books the 2h full groom, then on the day wants
+// the 1h basic. Without an edit the only options were cancel-and-rebook (which
+// loses the booking code the customer already has in WhatsApp, and the history)
+// or leaving the diary wrong — a 1h groom blocking a 2h slot all day.
+//
+// COMPLETED / PAID are excluded because reports and the payment record have
+// already counted that price; CANCELLED / NO_SHOW because their slot is
+// released and editing one would silently re-book released time.
+export const EDITABLE_STATUSES: AppointmentStatus[] = [
+  S.PENDING_CONFIRMATION,
+  S.CONFIRMED,
+  S.NOT_SURE,
+  S.ARRIVED,
+  S.GROOMING_STARTED,
+  S.GROOM_FINISHED,
+];
+
+export const canEditAppointment = (s: AppointmentStatus) => EDITABLE_STATUSES.includes(s);

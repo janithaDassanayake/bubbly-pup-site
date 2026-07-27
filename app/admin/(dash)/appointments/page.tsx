@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { dateOnly, formatDateLabel, salonNow } from "@/lib/time";
 import { to12h } from "@/lib/booking-engine";
 import { formatLKR } from "@/lib/format";
-import { ALL_STATUSES } from "@/lib/status";
+import { ALL_STATUSES, canEditAppointment } from "@/lib/status";
 import { isCloudApiConfigured } from "@/lib/whatsapp-send";
 import { getSettings } from "@/lib/settings";
 import { waPreviews } from "@/lib/admin-wa";
@@ -237,6 +237,17 @@ export default async function AppointmentsPage({
                           a.payment?.status === "PAID" ? a.payment.amount : null
                         }
                       />
+                      {/* Wrong package or a time change — fix the booking in
+                          place instead of cancelling and re-entering it, which
+                          would lose the code the customer already has. */}
+                      {canEditAppointment(a.status) && a.payment?.status !== "PAID" && (
+                        <Link
+                          href={`/admin/appointments/${a.id}/edit`}
+                          className="adm-btn adm-btn-sm"
+                        >
+                          ✏️ Edit
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}

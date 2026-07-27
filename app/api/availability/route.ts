@@ -27,7 +27,11 @@ export async function GET(req: Request) {
 
   const settings = await getSettings();
   const rules = toBusinessRules(settings);
-  const existing = await bookedIntervals(date);
+  // `exclude` is used by the admin edit screen so an appointment doesn't count
+  // as a conflict with itself. It only changes which slots are DISPLAYED as
+  // free; POST /api/bookings still validates against every booking, so this
+  // can't be used to slip a real double booking past the engine.
+  const existing = await bookedIntervals(date, searchParams.get("exclude") ?? undefined);
 
   const now = salonNow();
   const nowMin = date === now.dateISO ? now.nowMin : undefined;

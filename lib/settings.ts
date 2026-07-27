@@ -70,9 +70,19 @@ export function toBusinessRules(s: {
 // Booked intervals for a given day that still block the calendar (SRS §7).
 // Each carries its package's start gap: the bath is free again after that, so
 // the gap decides how soon the NEXT pet may start.
-export async function bookedIntervals(dateISO: string): Promise<Interval[]> {
+// `excludeId` is for editing an existing appointment: it must not be treated as
+// a conflict with itself, or every slot it already occupies looks taken and the
+// booking can never be moved or re-scoped.
+export async function bookedIntervals(
+  dateISO: string,
+  excludeId?: string
+): Promise<Interval[]> {
   const rows = await prisma.appointment.findMany({
-    where: { date: dateOnly(dateISO), status: { notIn: RELEASED_STATUSES } },
+    where: {
+      date: dateOnly(dateISO),
+      status: { notIn: RELEASED_STATUSES },
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
     select: { startMin: true, endMin: true, package: { select: { startGapMin: true } } },
   });
   return rows.map((r) => ({

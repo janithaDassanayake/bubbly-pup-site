@@ -13,7 +13,7 @@ import {
 import { prisma } from "@/lib/db";
 import { getCurrentAdmin } from "@/lib/session";
 import { isAdmin, isAssignable, isSuperUser, ROLE, type Role } from "@/lib/roles";
-import { canTransition } from "@/lib/status";
+import { canEditAppointment, canTransition } from "@/lib/status";
 import { getSettings, parseHolidays, toBusinessRules, RELEASED_STATUSES } from "@/lib/settings";
 import { computeEndMin, toMinutes, to12h, validateBooking } from "@/lib/booking-engine";
 import { salonNow, dateOnly, formatDateLabel } from "@/lib/time";
@@ -546,6 +546,186 @@ export async function createAppointment(
       return { ok: false, error: "That reference already exists — please try again." };
     }
     console.error("Manual booking failed:", err);
+    return { ok: false, error: "Something went wrong. Please try again." };
+  }
+}
+
+export type EditAppointmentInput = {
+  id: string;
+  packageKey: string;
+  addOnKeys: string[];
+  date: string; // yyyy-mm-dd
+  start: string; // HH:MM
+  notes?: string;
+  /** Queue a fresh WhatsApp with the new details for the owner to send. */
+  queueUpdate?: boolean;
+};
+
+/**
+ * Re-scope an existing appointment: package, add-ons, date and/or time.
+ *
+ * The booking it replaces may be shorter OR longer, so this is NOT a simple
+ * field update — it re-runs the same overlap/opening-hours/lead-time validation
+ * the public API uses, under the same per-date advisory lock. Two differences
+ * from createAppointment, both essential:
+ *
+ *  1. The appointment excludes ITSELF from the conflict check. Without that
+ *     every edit fails: the booking always overlaps the slot it already holds.
+ *  2. Both the old and the new date are locked when the date changes, so a
+ *     concurrent booking can't slip into the slot being vacated or the one
+ *     being taken.
+ *
+ * Price is recomputed from the new package + add-ons. Refuses once money is
+ * settled — see EDITABLE_STATUSES in lib/status.
+ */
+export async function updateAppointment(
+  input: EditAppointmentInput
+): Promise<{ ok: boolean; error?: string; code?: string }> {
+  const admin = await guard();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { ok: false, error: "Pick a valid date." };
+  if (!/^\d{2}:\d{2}$/.test(input.start)) return { ok: false, error: "Pick a time slot." };
+
+  const appt = await prisma.appointment.findUnique({
+    where: { id: input.id },
+    include: {
+      customer: { select: { name: true, phone: true } },
+      pet: { select: { name: true } },
+      package: { select: { key: true } },
+      payment: { select: { status: true } },
+    },
+  });
+  if (!appt) return { ok: false, error: "That appointment no longer exists." };
+
+  if (!canEditAppointment(appt.status)) {
+    return {
+      ok: false,
+      error: "This appointment can no longer be edited — it's already completed, paid or cancelled.",
+    };
+  }
+  // Belt and braces: a settled payment can exist before the status catches up,
+  // and re-pricing a paid visit would leave the books disagreeing with reality.
+  if (appt.payment?.status === PaymentStatus.PAID) {
+    return { ok: false, error: "Payment is already settled — reverse the payment before editing." };
+  }
+
+  const pkg = await prisma.package.findUnique({ where: { key: input.packageKey } });
+  if (!pkg || !pkg.active) return { ok: false, error: "Pick a package or service." };
+
+  const startMin = toMinutes(input.start);
+  const durationMin = pkg.durationMin; // add-ons never change duration
+  const endMin = computeEndMin(startMin, durationMin);
+
+  const settings = await getSettings();
+  const rules = toBusinessRules(settings);
+  const now = salonNow();
+  const nowMin = input.date === now.dateISO ? now.nowMin : undefined;
+
+  const addOns = input.addOnKeys.length
+    ? await prisma.addOn.findMany({ where: { key: { in: input.addOnKeys } } })
+    : [];
+  if (pkg.standalone && addOns.length === 0) {
+    return { ok: false, error: "Pick at least one service for a booking without a package." };
+  }
+  const addOnTotal = addOns.reduce((s, a) => s + a.price, 0);
+  const priceEstimate = pkg.standalone ? addOnTotal : pkg.price + addOnTotal;
+
+  const oldDateISO = appt.date.toISOString().slice(0, 10);
+  const rescheduled =
+    oldDateISO !== input.date || appt.startMin !== startMin || appt.package.key !== input.packageKey;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.date}))`;
+      // Moving to another day frees the old slot — lock that date too so a
+      // parallel booking can't race the space this edit is about to release.
+      if (oldDateISO !== input.date) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${oldDateISO}))`;
+      }
+
+      const existing = await tx.appointment.findMany({
+        where: {
+          date: dateOnly(input.date),
+          status: { notIn: RELEASED_STATUSES },
+          id: { not: input.id }, // never conflict with itself
+        },
+        select: { startMin: true, endMin: true, package: { select: { startGapMin: true } } },
+      });
+      const check = validateBooking({
+        dateISO: input.date,
+        startMin,
+        durationMin,
+        gapMin: pkg.startGapMin,
+        rules,
+        existing: existing.map((e) => ({
+          start: e.startMin,
+          end: e.endMin,
+          gapMin: e.package.startGapMin,
+        })),
+        nowMin,
+        todayISO: now.dateISO,
+      });
+      if (!check.ok) throw new BookingError(check.reason);
+
+      await tx.appointment.update({
+        where: { id: input.id },
+        data: {
+          packageId: pkg.id,
+          addOnKeys: input.addOnKeys,
+          date: dateOnly(input.date),
+          startMin,
+          endMin,
+          durationMin,
+          priceEstimate,
+          notes: input.notes?.trim() || null,
+        },
+      });
+
+      // The customer is holding a WhatsApp message with the OLD time and
+      // package. Queue a corrected one rather than leaving them to turn up for
+      // an appointment that moved. Queued, not sent — the owner taps send.
+      if (input.queueUpdate && rescheduled) {
+        await tx.notification.create({
+          data: {
+            appointmentId: input.id,
+            type: "APPOINTMENT_CONFIRMED",
+            toPhone: appt.customer.phone,
+            body: appointmentConfirmedBody({
+              businessName: settings.businessName,
+              ownerName: appt.customer.name,
+              petName: appt.pet.name,
+              packageName: pkg.name,
+              dateLabel: formatDateLabel(dateOnly(input.date)),
+              timeLabel: to12h(startMin),
+              code: appt.code,
+            }),
+          },
+        });
+      }
+    });
+
+    await audit(admin.sub, "APPOINTMENT_EDIT", "Appointment", input.id, {
+      code: appt.code,
+      from: {
+        packageKey: appt.package.key,
+        date: oldDateISO,
+        startMin: appt.startMin,
+        durationMin: appt.durationMin,
+        priceEstimate: appt.priceEstimate,
+      },
+      to: {
+        packageKey: input.packageKey,
+        date: input.date,
+        startMin,
+        durationMin,
+        priceEstimate,
+      },
+    });
+    revalidatePath("/admin", "layout");
+    return { ok: true, code: appt.code };
+  } catch (err) {
+    if (err instanceof BookingError) return { ok: false, error: err.message };
+    console.error("Appointment edit failed:", err);
     return { ok: false, error: "Something went wrong. Please try again." };
   }
 }
