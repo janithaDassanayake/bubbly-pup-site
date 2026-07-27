@@ -16,6 +16,7 @@ import { packageKeyForOption } from "@/lib/booking-map";
 import { phoneProblem } from "@/lib/phone";
 import { reservationRequestBody } from "@/lib/booking-message";
 import { DOG_BREEDS } from "@/lib/breeds";
+import BookingCalendar from "./BookingCalendar";
 import styles from "./Booking.module.css";
 
 // `taken` slots are still shown — greyed out and struck through — so the
@@ -442,33 +443,33 @@ export default function Booking({
         </div>
 
         <form className={styles.card} onSubmit={handleSubmit}>
-          <div className={styles.row}>
+          <div className={styles.field}>
+            <label htmlFor="package">Package *</label>
+            <select
+              id="package"
+              value={form.packageId}
+              onChange={(e) => changePackage(e.target.value)}
+            >
+              <option value="">Choose a package</option>
+              {options.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date sits directly above the slot grid, so "date → times" still
+              reads top to bottom. Full width: the month needs seven columns,
+              and a half-row squeezed them to something untappable on a phone. */}
+          <div className={styles.fieldWide}>
             <div className={styles.field}>
-              <label htmlFor="package">Package *</label>
-              <select
-                id="package"
-                value={form.packageId}
-                onChange={(e) => changePackage(e.target.value)}
-              >
-                <option value="">Choose a package</option>
-                {options.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Date sits beside the package, directly above the slot grid, so
-                the "date → times" order still reads top to bottom and neither
-                half of the row is left empty. */}
-            <div className={styles.field}>
-              <label htmlFor="date">Appointment Date *</label>
-              <input
-                id="date"
-                type="date"
-                min={today}
+              <label>Appointment Date *</label>
+              <BookingCalendar
                 value={form.date}
-                onChange={(e) => update("date", e.target.value)}
+                onChange={(d) => update("date", d)}
+                todayISO={today}
+                packageKey={packageKey}
               />
             </div>
           </div>

@@ -270,6 +270,269 @@
   }
 }
 
+/* ---------- date calendar ---------- */
+/* A month grid instead of <input type="date">: the native picker can only clamp
+   a range, so a holiday, a weekday the salon never opens and a fully booked day
+   all looked the same until the customer picked one. Each day here shows its
+   real state. See components/BookingCalendar.tsx. */
+.cal {
+  border: 2px solid var(--pink-100);
+  border-radius: 16px;
+  background: var(--cream);
+  padding: 12px;
+}
+
+.calHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.calMonth {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--plum);
+}
+
+.calNav {
+  font-family: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 11px;
+  border: 2px solid var(--pink-100);
+  background: #fff;
+  color: var(--plum);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.calNav:hover:not(:disabled) {
+  border-color: var(--pink-400);
+}
+
+.calNav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.calDow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.calDow span {
+  text-align: center;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #b3a2bd;
+}
+
+.calGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  transition: opacity 0.15s ease;
+}
+
+/* Refreshing for a new month/package — dim rather than blank, so the grid
+   doesn't jump and the customer keeps their place. */
+.calLoading {
+  opacity: 0.5;
+}
+
+.calBlank {
+  display: block;
+}
+
+.calDay {
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 46px;
+  padding: 4px 2px;
+  border-radius: 11px;
+  border: 2px solid var(--pink-100);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.calDay:hover:not(:disabled) {
+  border-color: var(--pink-400);
+}
+
+.calDay:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.calDay:disabled {
+  cursor: not-allowed;
+}
+
+.calNum {
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.calTag {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+/* Past — gone, and not worth a second look. */
+.calDay_past {
+  background: transparent;
+  border-color: transparent;
+  color: #cbc0d2;
+}
+
+/* Closed by the admin (holiday or a non-working weekday). Struck through, so
+   it reads as "shut" rather than merely "unavailable". */
+.calDay_closed {
+  background: #fbeef3;
+  border-color: #f4dbe6;
+  color: #c08fa8;
+}
+
+.calDay_closed .calNum {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.calDay_closed .calTag {
+  color: #c9819f;
+}
+
+/* Open, but every slot taken — the salon is busy, not shut. */
+.calDay_full {
+  background: #f2f0f4;
+  border-color: #e6e1ea;
+  color: #a89fb0;
+}
+
+.calDay_full .calTag {
+  color: #b3a2bd;
+}
+
+.calDay_open .calTag {
+  color: var(--pink-700);
+}
+
+/* Nearly gone — worth nudging. */
+.calDayLow {
+  border-color: var(--pink-300);
+}
+
+.calToday:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--pink-300);
+}
+
+.calDayOn,
+.calDayOn:hover {
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--shadow-pink);
+}
+
+.calDayOn .calTag {
+  color: #ffe6f4;
+}
+
+.calLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 12px;
+  font-size: 0.72rem;
+  color: var(--ink-soft, #6b5a66);
+}
+
+.calLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* No `border` shorthand here: it would out-specify the per-key `border-color`
+   below and paint every swatch in the text colour. */
+.calLegend i {
+  width: 11px;
+  height: 11px;
+  border-radius: 4px;
+  border-width: 2px;
+  border-style: solid;
+  flex: none;
+}
+
+.calKeyOpen {
+  background: #fff;
+  border-color: var(--pink-300);
+}
+
+.calKeyClosed {
+  background: #fbeef3;
+  border-color: #e8bcd0;
+}
+
+.calKeyFull {
+  background: #f2f0f4;
+  border-color: #ddd6e3;
+}
+
+.calNotice {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: var(--plum);
+  background: #fff4f8;
+  border: 2px dashed var(--pink-200);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.calNoteSm {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
+  color: var(--ink-soft, #6b5a66);
+}
+
+@media (max-width: 480px) {
+  .cal {
+    padding: 10px;
+  }
+  .calGrid,
+  .calDow {
+    gap: 4px;
+  }
+  .calDay {
+    min-height: 42px;
+    border-radius: 10px;
+  }
+  .calNum {
+    font-size: 0.86rem;
+  }
+  .calTag {
+    font-size: 0.48rem;
+  }
+}
+
 /* ---------- add-on chips (form + popup) ---------- */
 .addons {
   display: flex;

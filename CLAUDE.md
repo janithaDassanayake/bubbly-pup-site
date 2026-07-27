@@ -60,8 +60,10 @@ A self-hosted path also exists (`Dockerfile`, `docker-compose.prod.yml`, `Caddyf
 `DEPLOY-VERCEL.md`, `BACKEND.md`) for a single VPS (app + Postgres + Caddy + backup).
 
 ## Layout
-- `components/*` + `app/page.tsx` — marketing site; `components/Booking.tsx` is the booking form.
-- `app/api/availability` · `app/api/bookings` — public booking APIs (overlap-safe, transactional).
+- `components/*` + `app/page.tsx` — marketing site; `components/Booking.tsx` is the booking form,
+  `components/BookingCalendar.tsx` its month-grid date picker.
+- `app/api/availability` (times on a day) · `app/api/availability/days` (state of each day
+  in a month) · `app/api/bookings` — public booking APIs (overlap-safe, transactional).
 - `app/api/admin/login|logout` — auth (not behind middleware).
 - `middleware.ts` — guards `/admin/*` (jose, Edge runtime).
 - `app/admin/login/page.tsx` — login (root layout only); `forgot/`, `reset/[token]/`
@@ -75,7 +77,7 @@ A self-hosted path also exists (`Dockerfile`, `docker-compose.prod.yml`, `Caddyf
 - `app/admin/(dash)/ActionButtons.tsx` — client status/payment/WhatsApp buttons.
 - `app/admin/(dash)/SlotStrip.tsx` — the day-as-one-bar strip + its Free/Booked legend.
 - `lib/` — `booking-engine` (pure duration/overlap/slots/day timeline), `status` (lifecycle),
-  `slot-map` (admin slot occupancy), `whatsapp` (message + wa.me), `whatsapp-send`
+  `slot-map` (admin slot occupancy), `day-availability` (customer calendar day states), `whatsapp` (message + wa.me), `whatsapp-send`
   (optional Cloud API), `auth`/`session`, `password`/`password-policy`, `reset`
   (reset tokens), `mailer` (optional Resend), `site` (absolute URLs), `settings`,
   `catalog`, `admin-data`, `booking-map`, `time`, `format`, `roles` (owner/staff).
@@ -108,6 +110,20 @@ A self-hosted path also exists (`Dockerfile`, `docker-compose.prod.yml`, `Caddyf
   `npm run phones:normalise` (dry run) / `-- --apply`; it merges the duplicates,
   repointing pets and appointments BEFORE deleting a row (Pet cascades from
   Customer), and is idempotent.
+- **Closed days are SHOWN, never hidden.** Whatever the admin sets in Settings —
+  a holiday in the `HolidayPicker`, or a weekday unticked from `workingDays` —
+  reaches the customer's calendar (`components/BookingCalendar.tsx`) as a struck-out
+  "Closed" day plus a plain-English notice, and reaches the admin day strip
+  (`/admin/slots`) as "Holiday"/"Closed". `<input type="date">` was replaced for
+  exactly this reason: it can only clamp a range, so a holiday, a non-working
+  weekday and a fully-booked day all looked bookable and the customer only found
+  out after picking one and meeting an empty slot list. The day states come from
+  `lib/day-availability.ts` → the SAME engine + Settings as the booking APIs, so
+  the calendar can't offer a day `POST /api/bookings` would refuse. Four states:
+  `past` · `closed` (with `reason` holiday vs closed-day — the wording differs)
+  · `full` · `open`. A day with nothing left is only `full` if something is
+  actually **booked**; today's spent evening is `past`, because calling it "Full"
+  claims a busy salon that isn't.
 - **Overlap prevention** is the core business rule (`overlaps`/`validateBooking`);
   half-open intervals so a 10:00–12:00 booking leaves 12:00 free.
 - **Slot Management (`/admin/slots`)** is a *view*, never a second source of truth:
