@@ -1,0 +1,132 @@
+.wrap {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fff, var(--pink-50));
+}
+
+.editorial {
+  margin-top: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 70px;
+}
+
+.feature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 50px;
+  align-items: center;
+}
+
+.flip .screen {
+  order: 2;
+}
+
+.screen {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+  background: #1c0a17;
+  box-shadow: 0 40px 80px -34px rgba(122, 31, 85, 0.6);
+  border: 5px solid #fff;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* cinematic letterbox + scanline shimmer */
+.scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, transparent 18%, transparent 82%, rgba(0, 0, 0, 0.45) 100%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 4px);
+  mix-blend-mode: screen;
+}
+
+.chapter {
+  position: absolute;
+  left: 20px;
+  bottom: 18px;
+  z-index: 3;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  background: rgba(255, 105, 180, 0.85);
+  padding: 6px 14px;
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+}
+
+.meta {
+  padding: 6px 0;
+}
+
+.index {
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: var(--pink-300);
+  line-height: 1;
+}
+
+.index em {
+  font-size: 1.1rem;
+  font-style: normal;
+  color: #cfa9bf;
+}
+
+.featureTitle {
+  margin-top: 14px;
+  font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+  font-weight: 800;
+  color: var(--plum);
+}
+
+.caption {
+  margin-top: 14px;
+  font-size: 1.06rem;
+  color: #7c5470;
+  max-width: 420px;
+}
+
+.rule {
+  display: block;
+  margin-top: 22px;
+  width: 64px;
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--pink-500), var(--pink-700));
+}
+
+@media (max-width: 820px) {
+  .feature {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .flip .screen {
+    order: 0;
+  }
+  .editorial {
+    gap: 52px;
+  }
+}
+
+@media (max-width: 480px) {
+  .screen {
+    border-width: 3px;
+    border-radius: 18px;
+  }
+  .editorial {
+    gap: 36px;
+  }
+}

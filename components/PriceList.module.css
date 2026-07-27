@@ -1,0 +1,784 @@
+/* Packages live in the conveyor slider (CardSlider). What's left down here is
+   the à-la-carte pickers, side by side and the same height. */
+.extras {
+  margin-top: 46px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+/* ---------- the two à-la-carte cards ---------- */
+/* Same shell for both; only the skin differs. They used to be a white card and
+   a full-width plum band with different heads, paddings and list layouts, which
+   is why the pair never looked related. */
+.pickCard {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--pink-100);
+  border-radius: var(--radius);
+  padding: 26px 24px 22px;
+  box-shadow: 0 24px 50px -36px rgba(255, 105, 180, 0.4);
+}
+
+.pickCardDark {
+  background: linear-gradient(160deg, var(--plum), #b3346f);
+  border-color: transparent;
+  color: #fff;
+}
+
+.pickHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.pickHead h3 {
+  font-size: 1.22rem;
+  line-height: 1.2;
+  color: var(--plum);
+}
+
+.pickCardDark .pickHead h3 {
+  color: #fff;
+}
+
+.pickSub {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: #8a5f78;
+}
+
+.pickCardDark .pickSub {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.pickCardDark .emoji {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--pink-100);
+  border-radius: var(--radius);
+  padding: 28px 26px;
+  box-shadow: 0 24px 50px -36px rgba(255, 105, 180, 0.4);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  border-color: var(--pink-300);
+  box-shadow: 0 34px 66px -30px rgba(255, 105, 180, 0.55);
+}
+
+.popular {
+  border: 2px solid var(--pink-400);
+  background: linear-gradient(180deg, #fff, var(--pink-50));
+}
+
+/* ---------- a package card sitting in the conveyor ---------- */
+/* Every slide is the same fixed size, so the card fills it and the long
+   "what's included" list scrolls inside rather than stretching the card —
+   ragged card heights were the mess this replaced. */
+.slideCard {
+  height: 100%;
+  padding: 26px 24px 22px;
+}
+
+/* The conveyor owns all movement; a hover lift here would fight it. */
+.slideCard:hover {
+  transform: none;
+  border-color: var(--pink-100);
+  box-shadow: 0 24px 50px -36px rgba(255, 105, 180, 0.4);
+}
+.slideCard.popular:hover {
+  border-color: var(--pink-400);
+}
+
+.slideCard .footer {
+  padding-top: 16px;
+}
+
+/* ---------- what's included ---------- */
+/* Two columns of short ticked lines: the longest package (11 items) fits in six
+   rows, so nothing is hidden behind a scrollbar. Cards keep one fixed height, so
+   the shorter packages simply leave room above the offer box — which also lines
+   every "Book this package" button up along the same baseline. */
+.included {
+  /* Takes all the height the offer box and button don't need, so a short list
+     fills its card instead of leaving a hole above the price. */
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid var(--pink-100);
+  overflow: hidden;
+}
+
+.includedHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: none;
+  padding: 9px 14px;
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.includedCount {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 0.63rem;
+  letter-spacing: 0.06em;
+}
+
+.includedGrid {
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  /* Spread the rows through the leftover height rather than bunching them at
+     the top under a band of empty pink. */
+  align-content: space-evenly;
+  background: var(--pink-50);
+  /* Safety net, not the plan: the card height floor + the short-screen rules
+     below are sized so every package fits. If an unusual window still overflows,
+     degrade to a scroll rather than silently cutting services off the bottom. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 7+ services — two compact columns so nothing needs scrolling */
+.twoCol {
+  grid-template-columns: 1fr 1fr;
+  gap: 7px 12px;
+}
+
+/* ≤6 services — full width, roomier type, breathing space between rows */
+.oneCol {
+  grid-template-columns: 1fr;
+  gap: 9px;
+}
+
+.includedItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.oneCol .includedItem {
+  gap: 10px;
+  font-size: 0.95rem;
+}
+
+.oneCol .tick {
+  width: 18px;
+  height: 18px;
+  font-size: 0.68rem;
+  margin-top: 0;
+}
+
+.tick {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink-400), var(--pink-600));
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.badge {
+  position: absolute;
+  top: -13px;
+  left: 26px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px -10px rgba(255, 105, 180, 0.7);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.emoji {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  font-size: 1.6rem;
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
+}
+
+.cardHead h3 {
+  font-size: 1.22rem;
+  color: var(--plum);
+  line-height: 1.2;
+}
+
+/* One line: label on the left, was-price and offer on the right. The old
+   version stacked the label above a struck-through price with the big number
+   opposite, which was ~70px tall — enough to push the button off a laptop. */
+.offerRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 15px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
+}
+
+.offerPrices {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.offerRow .offerBig {
+  font-size: 1.55rem;
+  line-height: 1.15;
+}
+
+/* ---------- footer / offer ---------- */
+.footer {
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.offerBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
+}
+
+.offerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.offerLabel {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pink-700);
+}
+
+.was {
+  color: #b58aa5;
+  font-size: 0.9rem;
+  text-decoration: line-through;
+}
+
+.offerBig {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--plum);
+  letter-spacing: -0.02em;
+}
+
+/* two-tier offer (with / without knots) — pickable, not just displayed */
+.tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tier {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: var(--pink-50);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.tier:hover {
+  border-color: var(--pink-300);
+}
+
+/* the chosen variant — this is the one the button books */
+.tierOn {
+  border-color: var(--pink-400);
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
+}
+
+.tierBox {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  border: 2px solid var(--pink-300);
+  background: #fff;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.tierOn .tierBox {
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  border-color: transparent;
+}
+
+.tierLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--pink-700);
+}
+
+.tierPrices {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.offer {
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: var(--plum);
+}
+
+.note {
+  margin-top: 14px;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: #a06f8d;
+}
+
+.cta {
+  margin-top: 18px;
+  width: 100%;
+  justify-content: center;
+}
+
+/* white CTA on the dark plum add-ons card */
+.addonCta {
+  background: #fff;
+  color: var(--plum);
+  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.4);
+}
+
+.addonCta:hover {
+  transform: translateY(-3px) scale(1.02);
+}
+
+/* ---------- selectable service picker (both à-la-carte cards) ---------- */
+.picker {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ONE column, always. Two columns halved the row width to ~230px, which wrapped
+   "Full body trim / shave (without knots)" onto four lines and shoved the price
+   into the middle of the row. Full-width rows put every price in the same right
+   margin, which is how a price list is meant to scan. */
+.pickList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  /* Rows stay tight together, and the slack from holding 3 services instead of
+     4 falls between the list and the footer. Spreading the rows to fill it was
+     tried and looked worse — the services stopped reading as one list. */
+  justify-content: flex-start;
+  gap: 9px;
+}
+
+.pickRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.94rem;
+  font-weight: 500;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--pink-100);
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pickRow:hover {
+  border-color: var(--pink-300);
+}
+
+.pickOn {
+  border-color: var(--pink-400);
+  background: var(--pink-50);
+}
+
+.pickBox {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--pink-300);
+  background: #fff;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.pickOn .pickBox {
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  border-color: transparent;
+}
+
+.pickText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pickLabel {
+  line-height: 1.3;
+}
+
+/* the "(without knots)" half of a variant pair */
+.pickNote {
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: #a06f8d;
+}
+
+.pickerDark .pickNote {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.pickPrice {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-weight: 700;
+  font-style: italic;
+  color: #8a5f78;
+}
+
+/* total + CTA on one bar, pinned to the bottom of the card */
+.pickFoot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px dashed var(--pink-200);
+}
+
+.pickCardDark .pickFoot {
+  border-top-color: rgba(255, 255, 255, 0.28);
+}
+
+.pickTotal {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.15;
+}
+
+.pickTotalLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--pink-700);
+}
+
+.pickCardDark .pickTotalLabel {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.pickTotal strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--plum);
+}
+
+.pickCardDark .pickTotal strong {
+  color: #fff;
+}
+
+.pickBtn {
+  flex: 1;
+  min-width: 210px;
+  justify-content: center;
+}
+
+.pickBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* dark variant — on the plum extras band */
+.pickerDark .pickRow {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.pickerDark .pickRow:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.pickerDark .pickOn {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.pickerDark .pickBox {
+  border-color: rgba(255, 255, 255, 0.65);
+  background: transparent;
+}
+
+.pickerDark .pickOn .pickBox {
+  background: #fff;
+  border-color: #fff;
+  color: var(--plum);
+}
+
+.pickerDark .pickPrice {
+  color: rgba(255, 255, 255, 0.85);
+  font-style: normal;
+}
+
+.pickerDark .pickTotal strong {
+  color: #fff;
+}
+
+/* one column once the card is too narrow to hold two */
+@media (max-width: 620px) {
+  .pickBtn {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.foot {
+  margin-top: 30px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #a06f8d;
+}
+
+.foot a {
+  color: var(--pink-700);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+@media (max-width: 860px) {
+  .extras {
+    grid-template-columns: 1fr;
+    margin-top: 34px;
+  }
+}
+
+/* SHORT screens (a 768px-tall laptop, a small phone) — win the vertical space
+   back from the card's chrome, not from the list. Everything here trims padding
+   and oversized type; the services themselves stay readable. Applies by HEIGHT,
+   so a wide-but-short laptop gets it too — that was the case that broke.
+   The section heading is trimmed here too: on a 768px laptop the eyebrow, the
+   display-size title and a three-line subtitle ate ~330px before the cards even
+   started, which is what pushed the price and the button off the screen. */
+@media (max-height: 1000px) {
+  .section {
+    padding-top: 46px;
+    padding-bottom: 46px;
+  }
+  .sectionHead :global(.section-title) {
+    font-size: clamp(1.9rem, 3.4vw, 2.5rem);
+  }
+  .sectionHead :global(.section-sub) {
+    max-width: 640px;
+    margin-inline: auto;
+    font-size: 0.95rem;
+  }
+  .slideCard {
+    padding: 20px 22px 18px;
+  }
+  .slideCard .cardHead {
+    gap: 12px;
+    margin-bottom: 13px;
+  }
+  .slideCard .emoji {
+    width: 44px;
+    height: 44px;
+    font-size: 1.35rem;
+    border-radius: 14px;
+  }
+  .slideCard .cardHead h3 {
+    font-size: 1.1rem;
+  }
+  .slideCard .includedHead {
+    padding: 7px 12px;
+  }
+  .slideCard .includedGrid {
+    padding: 10px;
+  }
+  .slideCard .twoCol {
+    gap: 6px 10px;
+  }
+  .slideCard .includedItem {
+    font-size: 0.79rem;
+  }
+  .slideCard .oneCol .includedItem {
+    font-size: 0.9rem;
+  }
+  .slideCard .offerBox,
+  .slideCard .tier {
+    padding: 10px 14px;
+  }
+  .slideCard .offerBig {
+    font-size: 1.5rem;
+  }
+  .slideCard .note {
+    margin-top: 9px;
+    font-size: 0.76rem;
+  }
+  .slideCard .footer {
+    padding-top: 12px;
+  }
+  .slideCard .cta {
+    margin-top: 12px;
+  }
+}
+
+/* Shortest laptops (768px): the last few pixels come out of the section's own
+   padding, so the counter keeps its clearance and the list keeps its type. */
+@media (max-height: 800px) {
+  .section {
+    padding-top: 20px;
+  }
+}
+
+/* A phone card is narrower, so the two columns wrap more lines. Buy that space
+   back from the chrome rather than from the list — the list is the point. */
+@media (max-width: 900px) {
+  .slideCard {
+    padding: 20px 18px 18px;
+  }
+  .slideCard .cardHead {
+    gap: 11px;
+    margin-bottom: 14px;
+  }
+  .slideCard .emoji {
+    width: 42px;
+    height: 42px;
+    font-size: 1.3rem;
+    border-radius: 13px;
+  }
+  .slideCard .cardHead h3 {
+    font-size: 1.06rem;
+  }
+  .slideCard .includedGrid {
+    padding: 10px;
+  }
+  .slideCard .twoCol {
+    gap: 6px 9px;
+  }
+  .slideCard .oneCol {
+    gap: 8px;
+  }
+  .slideCard .includedItem {
+    font-size: 0.76rem;
+    gap: 6px;
+  }
+  .slideCard .oneCol .includedItem {
+    font-size: 0.88rem;
+    gap: 9px;
+  }
+  .slideCard .offerBig {
+    font-size: 1.45rem;
+  }
+  .slideCard .note {
+    margin-top: 10px;
+    font-size: 0.76rem;
+  }
+  .slideCard .cta {
+    margin-top: 12px;
+  }
+}
+
+/* Small handsets (iPhone SE and friends): the two columns land at ~150px, so
+   most service names wrap to two lines. Measured at 375x667 the 11-service
+   package was 32px over — this trims the type once more so it fits whole. */
+@media (max-width: 420px) {
+  .slideCard .twoCol {
+    gap: 5px 8px;
+  }
+  .slideCard .twoCol .includedItem {
+    font-size: 0.73rem;
+    gap: 5px;
+  }
+  .slideCard .twoCol .tick {
+    width: 13px;
+    height: 13px;
+    font-size: 0.52rem;
+  }
+}

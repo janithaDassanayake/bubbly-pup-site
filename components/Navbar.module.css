@@ -1,0 +1,167 @@
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
+    background 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
+  padding: 18px 0;
+}
+
+/* slides up out of view when scrolling down */
+.hidden {
+  transform: translateY(-115%);
+}
+
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.4rem;
+  color: var(--plum);
+}
+
+/* transparent logo, sits directly on the bar */
+.logoImg {
+  height: 112px;
+  width: auto;
+  margin: -22px 0;
+  transition: height 0.3s ease;
+}
+
+@media (max-width: 600px) {
+  .logoImg {
+    height: 78px;
+    margin: -14px 0;
+  }
+}
+
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+  font-weight: 500;
+}
+
+.links a:not(.navCta) {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: color 0.25s ease;
+  position: relative;
+}
+
+/* nav text adapts to the section behind it */
+.light .links a:not(.navCta) {
+  color: rgba(255, 255, 255, 0.88);
+}
+.light .links a:not(.navCta):hover {
+  color: #fff;
+}
+
+.dark .links a:not(.navCta) {
+  color: var(--ink);
+}
+.dark .links a:not(.navCta):hover {
+  color: var(--pink-600);
+}
+
+/* cinematic underline that wipes in on hover */
+.links a:not(.navCta)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 100%;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--pink-400), var(--pink-600));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.links a:not(.navCta):hover::after {
+  transform: scaleX(1);
+}
+
+.navCta {
+  padding: 10px 22px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.burger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.burger span {
+  width: 26px;
+  height: 3px;
+  border-radius: 3px;
+  background: #fff;
+  transition: transform 0.3s ease, opacity 0.3s ease, background 0.25s ease;
+}
+
+.dark .burger span {
+  background: var(--plum);
+}
+
+.x1 {
+  transform: translateY(8px) rotate(45deg);
+}
+.x2 {
+  opacity: 0;
+}
+.x3 {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+@media (max-width: 860px) {
+  .burger {
+    display: flex;
+    z-index: 20;
+  }
+
+  .links {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(76vw, 320px);
+    flex-direction: column;
+    justify-content: center;
+    gap: 26px;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(16px);
+    box-shadow: -20px 0 60px -20px rgba(255, 105, 180, 0.4);
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+    font-size: 1.25rem;
+  }
+
+  /* inside the open pink/white menu the links are always dark */
+  .links a:not(.navCta) {
+    color: var(--plum) !important;
+  }
+
+  .linksOpen {
+    transform: none;
+  }
+}

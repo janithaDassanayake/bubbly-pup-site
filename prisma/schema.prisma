@@ -1,0 +1,245 @@
+// Pet Grooming Appointment Management System — data model (SRS §19).
+// Provider: PostgreSQL (runs in Docker alongside the app on the VPS).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- catalog ----------
+// Holds both real packages (standalone=false) and standalone services
+// (standalone=true). Each row carries its own duration (SRS §4).
+model Package {
+  id           String        @id @default(cuid())
+  key          String        @unique
+  name         String
+  durationMin  Int
+  price        Int // LKR base/offer price
+  // Minutes the next pet must wait before IT can start, once this package has
+  // begun. Only one bath, and bathing comes first — so two grooms may overlap,
+  // but they can't both be starting (and bathing) at the same moment. Tracks
+  // time in the tub, NOT the length of the appointment: the 2-hour trim package
+  // uses the same bath as the 1-hour wash, it just spends longer on the table.
+  startGapMin  Int           @default(30)
+  standalone   Boolean       @default(false)
+  active       Boolean       @default(true)
+  appointments Appointment[]
+}
+
+model AddOn {
+  id       String  @id @default(cuid())
+  key      String  @unique
+  name     String
+  price    Int
+  category String
+  group    String
+  active   Boolean @default(true)
+}
+
+// ---------- people & pets ----------
+model Customer {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String        @unique
+  email        String?
+  createdAt    DateTime      @default(now())
+  pets         Pet[]
+  appointments Appointment[]
+}
+
+model Pet {
+  id           String        @id @default(cuid())
+  name         String
+  breed        String?
+  age          String?
+  gender       PetGender     @default(UNKNOWN)
+  notes        String?
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId   String
+  appointments Appointment[]
+}
+
+// ---------- appointments ----------
+model Appointment {
+  id            String            @id @default(cuid())
+  code          String            @unique
+  customer      Customer          @relation(fields: [customerId], references: [id])
+  customerId    String
+  pet           Pet               @relation(fields: [petId], references: [id])
+  petId         String
+  package       Package           @relation(fields: [packageId], references: [id])
+  packageId     String
+  addOnKeys     String[]          @default([])
+  date          DateTime          @db.Date
+  startMin      Int
+  endMin        Int
+  durationMin   Int
+  status        AppointmentStatus @default(PENDING_CONFIRMATION)
+  priceEstimate Int               @default(0)
+  notes         String?
+  payment       Payment?
+  notifications Notification[]
+  photos        AppointmentPhoto[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([date, status])
+}
+
+// Before/after grooming photos. The image itself lives in S3 (private bucket);
+// we store only the object key and serve it through short-lived signed URLs.
+// One BEFORE and one AFTER per appointment — a retake overwrites the same row.
+model AppointmentPhoto {
+  id            String      @id @default(cuid())
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  appointmentId String
+  kind          PhotoKind
+  s3Key         String
+  contentType   String      @default("image/jpeg")
+  bytes         Int         @default(0)
+  createdAt     DateTime    @default(now())
+
+  @@unique([appointmentId, kind])
+}
+
+model Payment {
+  id            String         @id @default(cuid())
+  appointment   Appointment    @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  appointmentId String         @unique
+  amount        Int            @default(0)
+  method        PaymentMethod?
+  status        PaymentStatus  @default(UNPAID)
+  paidDate      DateTime?
+  createdAt     DateTime       @default(now())
+}
+
+// ---------- messaging ----------
+model Notification {
+  id            String             @id @default(cuid())
+  appointment   Appointment?       @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  appointmentId String?
+  type          NotificationType
+  status        NotificationStatus @default(PENDING)
+  toPhone       String
+  body          String
+  providerMsgId String?
+  error         String?
+  attempts      Int                @default(0)
+  createdAt     DateTime           @default(now())
+  sentAt        DateTime?
+
+  @@index([type, status])
+}
+
+// ---------- config, auth, audit ----------
+model Settings {
+  id                  Int      @id @default(1)
+  businessName        String   @default("Bubbly Pup Pet Grooming")
+  openTime            String   @default("09:00")
+  closeTime           String   @default("18:00")
+  workingDays         Int[]    @default([1, 2, 3, 4, 5, 6, 0])
+  holidays            String[] @default([])
+  slotStepMin         Int      @default(30)
+  minLeadMinutes      Int      @default(60)
+  reminderLeadMinutes Int      @default(180)
+  // How many pets can be groomed at the same time. The salon runs one bath and
+  // one table, so two dogs overlap comfortably — one washing while the other is
+  // dried and trimmed.
+  capacity            Int      @default(2)
+  updatedAt           DateTime @updatedAt
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String   @default("Admin")
+  // "owner" (the salon owner — the only role that can manage logins) or "staff".
+  // See lib/roles.ts. New accounts are staff; the owner is seeded.
+  role         String   @default("staff")
+  createdAt    DateTime @default(now())
+  // Set when an admin is created with a temporary password: the owner must
+  // replace it before reaching any admin page.
+  mustChangePassword Boolean              @default(false)
+  lastLoginAt        DateTime?
+  resetTokens        PasswordResetToken[]
+}
+
+// One-time password-reset tokens. Only the SHA-256 of the token is stored — a
+// leaked database row can't be turned back into a working reset link.
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  admin       AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUserId String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  // Drives the "how many resets were requested lately?" throttle.
+  @@index([adminUserId, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String?
+  action      String
+  entity      String
+  entityId    String?
+  meta        Json?
+  createdAt   DateTime @default(now())
+}
+
+// ---------- enums ----------
+enum AppointmentStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  NOT_SURE
+  CANCELLED
+  NO_SHOW
+  ARRIVED
+  GROOMING_STARTED
+  GROOM_FINISHED
+  PAID
+  COMPLETED
+}
+
+enum PhotoKind {
+  BEFORE
+  AFTER
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMATION
+  APPOINTMENT_CONFIRMED
+  REMINDER
+  THANK_YOU
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum PetGender {
+  MALE
+  FEMALE
+  UNKNOWN
+}

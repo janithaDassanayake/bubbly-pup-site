@@ -1,0 +1,443 @@
+/* ===================================================================
+   Grooming clips slider — ported from the cinematic-portfolio
+   Publications slider, themed to the Hot Pink brand and adapted for
+   the vertical (9:16) explainer videos.
+   =================================================================== */
+
+.wrap {
+  background: linear-gradient(180deg, #fff 0%, var(--pink-50) 100%);
+  overflow: hidden;
+}
+
+/* dark cinematic stage that holds the conveyor (the GSAP effect owns
+   positioning, so most of this is look + layout) */
+.stage {
+  --pink: #ff69b4;
+  --pink-bright: #ff4fa8;
+  --pink-soft: #db3a8d;
+  --line: rgba(255, 105, 180, 0.32);
+  --glass: rgba(255, 255, 255, 0.72);
+  --pub-text: #4a1838;
+  --pub-text-dim: #9c2566;
+
+  position: relative;
+  width: 100%;
+  height: min(82vh, 760px);
+  margin-top: 30px;
+  overflow: hidden;
+  background: transparent;
+  color: var(--pub-text);
+}
+
+.stage :global(p),
+.stage :global(a) {
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pub-text-dim);
+}
+
+.stage :global(.slider) {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* ---------- slide cards (vertical 9:16 videos) ---------- */
+.stage :global(.slide-container) {
+  position: absolute;
+  height: min(64vh, 560px);
+  aspect-ratio: 9 / 16;
+  width: auto;
+  top: 55%;
+  left: 50%;
+  background: linear-gradient(150deg, #ffe6f4, #ffd3ec);
+  cursor: pointer;
+  overflow: hidden;
+  will-change: transform, opacity;
+  border-radius: 18px;
+  box-shadow: 0 40px 90px -30px rgba(122, 31, 85, 0.45);
+  z-index: 2;
+}
+.stage :global(.slide-container.active) {
+  box-shadow:
+    0 40px 90px -25px rgba(122, 31, 85, 0.45),
+    0 0 0 2px rgba(255, 105, 180, 0.55),
+    0 0 50px -6px rgba(255, 105, 180, 0.55);
+}
+
+.stage :global(.slide-img) {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+.stage :global(.slide-img video) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* center play glyph — only on the active, not-yet-playing card */
+.stage :global(.slide-play) {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 72px;
+  display: none;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 105, 180, 0.95);
+  color: #fff;
+  font-size: 1.5rem;
+  padding-left: 5px;
+  box-shadow: 0 14px 36px -8px rgba(255, 105, 180, 0.7);
+  pointer-events: none;
+  z-index: 4;
+  animation: playPulse 2s ease-in-out infinite;
+}
+.stage :global(.slide-container.active .slide-play) {
+  display: grid;
+}
+.stage :global(.slide-container.playing .slide-play) {
+  display: none;
+}
+@keyframes playPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.08); }
+}
+
+/* ---------- big animated title (hidden — card already conveys it) ---------- */
+.stage :global(.slider-title) {
+  display: none;
+}
+
+/* ---------- details panel (bottom bar) ---------- */
+/* wrapper owns position + hover visibility; the inner bar is GSAP-animated */
+.stage :global(.slider-details-wrap) {
+  position: absolute;
+  left: 50%;
+  top: 1.1em;
+  bottom: auto;
+  transform: translateX(-50%) translateY(-10px);
+  width: auto;
+  max-width: 88%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  z-index: 20;
+}
+.stage.detailsOn :global(.slider-details-wrap) {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.stage :global(.slider-details) {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.15rem;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+.stage :global(.slider-details .d-head) {
+  flex: 1;
+  min-width: 0;
+}
+.stage :global(.d-venue) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pink-soft);
+  margin-bottom: 0.3rem;
+}
+.stage :global(.d-venue .d-dot) {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff69b4;
+  box-shadow: 0 0 8px #ff69b4;
+}
+.stage :global(.d-role) {
+  font-size: 1rem;
+  line-height: 1.3;
+  text-transform: none;
+  color: var(--pub-text);
+  font-weight: 600;
+}
+.stage :global(.d-role strong) {
+  display: block;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pub-text-dim);
+  margin-bottom: 0.12rem;
+  font-weight: 600;
+}
+
+.stage :global(.d-link) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 0.9rem;
+  border-radius: 100px;
+  background: linear-gradient(120deg, var(--pink), var(--pink-bright));
+  box-shadow: 0 12px 30px -10px rgba(255, 105, 180, 0.7);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.stage :global(.d-link:hover) {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px -10px rgba(255, 105, 180, 0.95);
+}
+.stage :global(.d-play-glyph) {
+  font-size: 0.7rem;
+}
+
+/* ---------- counter ---------- */
+.stage :global(.slider-counter) {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0.5em;
+  text-align: center;
+  z-index: 20;
+}
+.stage :global(.slider-counter p) {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+  color: var(--pub-text);
+  letter-spacing: 0.1em;
+}
+
+/* ---------- pagination dots ---------- */
+.stage :global(.slider-dots) {
+  position: absolute;
+  right: 1.6em;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  z-index: 40;
+}
+.stage :global(.slider-dots button) {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 105, 180, 0.35);
+  cursor: pointer;
+  transition: all 0.35s ease;
+}
+.stage :global(.slider-dots button:hover) {
+  background: rgba(255, 105, 180, 0.7);
+  transform: scale(1.25);
+}
+.stage :global(.slider-dots button.active) {
+  height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(var(--pink-bright), #ffd9ee);
+  box-shadow: 0 0 12px rgba(255, 105, 180, 0.85);
+}
+
+/* ---------- hover-to-browse hints ---------- */
+.stage :global(.hover-hint) {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--pink-soft);
+  opacity: 0.4;
+  z-index: 30;
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 0 0 20px rgba(255, 105, 180, 0.6);
+  animation: hintPulse 2.2s ease-in-out infinite;
+}
+.stage :global(.hover-hint.left) {
+  left: 1.5rem;
+}
+.stage :global(.hover-hint.right) {
+  right: 3.2rem;
+}
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.28; }
+  50% { opacity: 0.65; }
+}
+@media (hover: none), (pointer: coarse) {
+  .stage :global(.hover-hint) {
+    display: none;
+  }
+}
+
+/* ---------- side list ---------- */
+.stage :global(.slider-items) {
+  position: absolute;
+  left: 2.4em;
+  bottom: 2.4em;
+  z-index: 20;
+  max-width: 230px;
+}
+.stage :global(.slider-items-count) {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pink-soft);
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+.stage :global(.slider-items p) {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  transition: 0.4s color, 0.4s transform;
+  cursor: pointer;
+  line-height: 1.75;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--pub-text-dim);
+}
+.stage :global(.slider-items .item-num) {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 179, 222, 0.45);
+  transition: color 0.4s ease;
+}
+.stage :global(.slider-items p:hover) {
+  color: var(--pink-soft);
+  transform: translateX(4px);
+}
+.stage :global(.slider-items p.activeItem) {
+  color: #fff;
+}
+.stage :global(.slider-items p.activeItem .item-num) {
+  color: var(--pink-bright);
+}
+
+/* ---------- count badge (mobile only) ---------- */
+.stage :global(.pub-count-badge) {
+  display: none;
+}
+
+/* ===================================================================
+   RESPONSIVE
+   =================================================================== */
+@media (max-width: 900px) {
+  .stage {
+    height: min(78vh, 680px);
+  }
+  .stage :global(.slide-container) {
+    top: 38%;
+    height: min(52vh, 430px);
+    aspect-ratio: 9 / 16;
+    width: auto;
+    max-width: calc(100vw - 1.75rem);
+  }
+
+  /* title/tag sits in its own band below the video */
+  .stage :global(.slider-details-wrap) {
+    top: auto;
+    bottom: calc(3.4rem + env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(10px);
+    width: calc(100% - 1.6rem);
+    max-width: 460px;
+    text-align: center;
+  }
+  .stage.detailsOn :global(.slider-details-wrap) {
+    transform: translateX(-50%) translateY(0);
+  }
+  /* center the title/tag and keep them clear of the video */
+  .stage :global(.slider-details) {
+    width: 100%;
+    align-items: center;
+  }
+  .stage :global(.d-role) {
+    font-size: 0.92rem;
+  }
+
+  .stage :global(.pub-count-badge) {
+    display: inline-block;
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 40;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--pink-soft);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    padding: 0.35rem 0.7rem;
+    border-radius: 100px;
+  }
+  .stage :global(.slider-counter) {
+    top: 1rem;
+    bottom: auto;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    padding: 0.32rem 0.8rem;
+    border-radius: 100px;
+  }
+  .stage :global(.slider-counter p) {
+    font-size: 0.66rem;
+    font-weight: 700;
+    color: var(--pink-soft);
+  }
+
+  .stage :global(.slider-items) {
+    display: none;
+  }
+
+  /* dots sit below the title, at the very bottom */
+  .stage :global(.slider-dots) {
+    right: auto;
+    top: auto;
+    bottom: calc(1.3rem + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: row;
+    gap: 0.45rem;
+  }
+  .stage :global(.slider-dots button.active) {
+    height: 9px;
+    width: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage :global(.hover-hint),
+  .stage :global(.slide-play) {
+    animation: none;
+  }
+}

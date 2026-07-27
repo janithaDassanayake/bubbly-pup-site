@@ -1,0 +1,153 @@
+.footer {
+  background: #2a0d22;
+  color: rgba(255, 255, 255, 0.82);
+  padding-top: 52px;
+}
+
+/* Three short, evenly weighted columns. Nothing here is tall, so no column
+   leaves a void beside the others — that gap was the old logo + blurb block. */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1.1fr;
+  gap: 40px;
+  align-items: start;
+  padding-bottom: 38px;
+}
+
+.small {
+  margin-top: 2px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 300px;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.col h4 {
+  color: #fff;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.col a,
+.col span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.95rem;
+  transition: color 0.2s ease;
+}
+
+.col a:hover {
+  color: var(--pink-300);
+}
+
+.col .btn {
+  margin-top: 6px;
+  width: fit-content;
+}
+
+/* Fixed icon gutter: emoji glyphs vary in width, so inline "📍 text" made each
+   contact line start at a different x. A wrapped address also now hangs under
+   its own first line rather than tucking beneath the pin. */
+.contactRow {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: start;
+  line-height: 1.5;
+}
+
+.contactIcon {
+  text-align: center;
+  line-height: inherit;
+}
+
+.mapWrap {
+  padding-bottom: 34px;
+}
+
+.mapHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.mapHead h4 {
+  color: #fff;
+  font-size: 1.05rem;
+}
+
+.mapLink {
+  color: var(--pink-300);
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.mapLink:hover {
+  color: #fff;
+}
+
+/* Rounded corners live on the wrapper, not the iframe — Safari lets iframe
+   content paint over its own border-radius. Explicit background so the dark
+   footer doesn't flash a white block while the lazy iframe loads. */
+.mapFrame {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* A wide, letterbox strip rather than a deep block: enough width for Google's
+   fixed-size info card to look like a label, short enough not to reintroduce
+   the empty space the tall version had. */
+.map {
+  display: block;
+  width: 100%;
+  height: 240px;
+  border: 0;
+}
+
+.bar {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 22px 0;
+}
+
+.barInner {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 880px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 520px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  /* Google's info card needs most of a phone's width, so give the map a little
+     more height here or the card crowds the pin off-screen. */
+  .map {
+    height: 260px;
+  }
+  .barInner {
+    flex-direction: column;
+    text-align: center;
+  }
+}

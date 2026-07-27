@@ -1,0 +1,561 @@
+.wrap {
+  overflow-x: hidden;
+  background:
+    radial-gradient(900px 500px at 15% 10%, rgba(255, 105, 180, 0.25), transparent 60%),
+    linear-gradient(160deg, var(--plum), #5a163d);
+  color: #fff;
+}
+
+.card {
+  max-width: 100%;
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 50px;
+  align-items: start;
+}
+
+.intro {
+  position: sticky;
+  top: 110px;
+}
+
+.title {
+  margin-top: 16px;
+  font-size: clamp(1.9rem, 4vw, 2.8rem);
+  font-weight: 800;
+  color: #fff;
+}
+
+.sub {
+  margin-top: 16px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.06rem;
+  max-width: 420px;
+}
+
+.perks {
+  list-style: none;
+  padding: 0;
+  margin: 26px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.contactCard {
+  margin-top: 30px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 16px 18px;
+  border-radius: 16px;
+  width: fit-content;
+}
+
+.waIcon {
+  font-size: 1.6rem;
+}
+
+.contactCard small {
+  display: block;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.contactCard a {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+/* ---------- form card ---------- */
+.card {
+  background: #fff;
+  border-radius: 26px;
+  padding: 34px;
+  color: var(--ink);
+  box-shadow: 0 50px 100px -40px rgba(0, 0, 0, 0.5);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+}
+
+.field label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--plum);
+  margin-bottom: 7px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  font-family: inherit;
+  font-size: 1rem; /* >=16px avoids iOS auto-zoom */
+  color: var(--ink);
+  padding: 13px 14px;
+  border: 2px solid var(--pink-100);
+  border-radius: 13px;
+  background: var(--cream);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  resize: vertical;
+}
+
+/* uniform height so the date field matches the others (iOS renders it taller) */
+.field input,
+.field select {
+  height: 50px;
+}
+.field input[type="date"] {
+  display: block;
+  min-height: 50px;
+}
+
+/* custom chevron for selects (native one is hidden by appearance:none) */
+.field select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239c2566' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--pink-400);
+  box-shadow: 0 0 0 4px var(--pink-100);
+}
+
+.toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.toggleBtn {
+  font-family: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 13px;
+  border: 2px solid var(--pink-100);
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggleBtn:hover {
+  border-color: var(--pink-300);
+}
+
+.toggleOn {
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--shadow-pink);
+}
+
+/* Full-bleed wrapper so the slot grid isn't squeezed into half a row. */
+.fieldWide {
+  display: block;
+  width: 100%;
+}
+
+/* ---------- time slot grid ---------- */
+/* Buttons instead of a <select> so a booked time can be shown greyed and struck
+   through — browsers refuse to style <option>, and hiding taken times made the
+   salon look closed rather than busy. */
+.slotGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+
+.slot {
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 11px 8px;
+  border-radius: 12px;
+  border: 2px solid var(--pink-100);
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.15;
+}
+
+.slot:hover:not(:disabled) {
+  border-color: var(--pink-400);
+  background: #fff;
+}
+
+.slot:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.slotOn {
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--shadow-pink);
+}
+
+/* Taken: visible but clearly unavailable. */
+.slotTaken {
+  background: #f2f0f4;
+  border-color: #e6e1ea;
+  color: #a89fb0;
+  cursor: not-allowed;
+}
+
+.slotTaken .slotTime {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.slotTag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #b3a2bd;
+}
+
+.slotHint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft, #6b5a66);
+  background: var(--cream);
+  border: 2px dashed var(--pink-100);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .slotGrid {
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  }
+  .slot {
+    font-size: 0.86rem;
+    padding: 10px 6px;
+  }
+}
+
+/* ---------- add-on chips (form + popup) ---------- */
+.addons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.addonChip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 12px 14px;
+  border-radius: 13px;
+  border: 2px solid var(--pink-100);
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.addonChip:hover {
+  border-color: var(--pink-300);
+}
+
+.addonOn {
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--shadow-pink);
+}
+
+.addonCheck {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--pink-100);
+  color: var(--pink-700);
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+
+.addonOn .addonCheck {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.addonLabel {
+  flex: 1;
+}
+
+.addonPrice {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+/* ---------- add-ons popup ---------- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Scrollable overlay + safe-area padding: on a short phone (or with the
+     keyboard up) a tall dialog stays reachable instead of running off-screen. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px max(16px, env(safe-area-inset-left)) calc(20px + env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-right));
+  background: rgba(74, 24, 56, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.modal {
+  width: 100%;
+  max-width: 430px;
+  /* Never taller than the viewport — the body scrolls inside instead. */
+  max-height: calc(100dvh - 40px);
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 22px;
+  padding: 28px 26px;
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.55);
+  animation: modalPop 0.24s ease;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.modalTitle {
+  font-size: 1.4rem;
+  color: var(--plum);
+}
+
+.modalSub {
+  margin-top: 5px;
+  color: #8a5f78;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.modalList {
+  margin: 20px 0;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
+.modalActions {
+  display: flex;
+  flex: none;
+  gap: 12px;
+}
+
+/* Two buttons side by side get squeezed to two-line labels on a small phone —
+   stack them, primary on top. */
+@media (max-width: 400px) {
+  .modalActions {
+    flex-direction: column-reverse;
+  }
+}
+
+.modalActions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+.modalActions .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- aggressive-dog consent notice ---- */
+/* Tighter padding than a plain modal so the warning banner can span edge to
+   edge and the title still fits on ONE line down to a 320px phone. */
+.consentModal {
+  padding: 0;
+  overflow: hidden;
+}
+
+.consentHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 15px 18px;
+  background: linear-gradient(135deg, #fff1f6, #ffe3ef);
+  border-bottom: 1px solid var(--pink-200);
+}
+
+.consentIcon {
+  flex: none;
+  font-size: clamp(1rem, 4vw, 1.2rem);
+  line-height: 1;
+}
+
+/* One line, always: the type shrinks with the viewport rather than wrapping. */
+.consentTitle {
+  min-width: 0;
+  margin: 0;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(0.83rem, 3.7vw, 1.15rem);
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--plum);
+}
+
+.consentBody {
+  /* Flexes with the dialog: shares the modal's own scroll area instead of
+     stacking a second scrollbar inside a fixed 40vh box. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 18px 4px;
+}
+
+.consentBody p {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--plum);
+  margin: 0 0 10px;
+}
+
+.consentFoot {
+  flex: none;
+  padding: 4px 18px 18px;
+}
+
+.consentCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fff0f5;
+  border: 1px solid var(--pink-200);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--plum);
+}
+
+.consentCheck input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 2px;
+  accent-color: var(--pink-600, #db3a8d);
+  cursor: pointer;
+}
+
+.error {
+  background: #fff0f5;
+  color: var(--pink-700);
+  border: 1px solid var(--pink-200);
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.submit {
+  width: 100%;
+  justify-content: center;
+  font-size: 1.05rem;
+  padding: 16px;
+}
+
+.waGlyph {
+  font-size: 1.2rem;
+}
+
+.fineprint {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #a07591;
+}
+
+@media (max-width: 900px) {
+  .inner {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .intro {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .card {
+    padding: 24px 20px;
+  }
+}

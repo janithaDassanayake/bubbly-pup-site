@@ -1,0 +1,26 @@
+/node_modules
+/.next
+/out
+/build
+.DS_Store
+*.pem
+npm-debug.log*
+.env
+.env*.local
+.env.production
+!.env.example
+!.env.production.example
+/backups
+/.devdb
+# Source originals of the site media — the SAME videos already live in
+# public/media with clean ASCII names (see README "Media"). Committing both
+# doubles the repo for no benefit, and git history is permanent. Kept on disk,
+# just not in git; back these up separately.
+/images_and_videos
+next-env.d.ts
+.vercel
+*.tsbuildinfo
+
+.vercel
+
+.vercel

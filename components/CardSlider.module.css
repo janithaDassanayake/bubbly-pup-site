@@ -1,0 +1,219 @@
+/* Conveyor card slider — the motion language of the explainer clips slider
+   (Explainers.module.css), retuned for wide content cards. GSAP owns left /
+   scale / opacity / z-index; everything here is look and layout. */
+
+.stage {
+  /* The card height has a FLOOR, not just a viewport fraction. Sizing purely in
+     vh meant a laptop (768px tall) got a ~520px card, which is less than the
+     longest package needs — so the bottom of "What's included" fell off the
+     card. Below the floor the section simply gets taller and the page scrolls a
+     little, which is fine; content disappearing is not.
+     The stage is then derived from the card + room for the counter and dots. */
+  /* --chrome is the breathing room around the card: half above, half below,
+     which is what keeps the "1 / 4" counter clear of the card edge instead of
+     tucked against it. */
+  --card-h: clamp(500px, 68vh, 620px);
+  --chrome: 108px;
+
+  position: relative;
+  width: 100%;
+  height: calc(var(--card-h) + var(--chrome));
+  margin-top: 34px;
+  overflow: hidden;
+}
+
+/* Laptop heights: the card body is compacted (see PriceList.module.css), so a
+   lower floor still shows every service — and the whole card lands inside the
+   screen along with the heading instead of hanging below the fold. */
+@media (max-height: 1000px) {
+  .stage {
+    --chrome: 92px;
+    margin-top: 16px;
+  }
+}
+
+@media (max-height: 800px) {
+  .stage {
+    --chrome: 92px;
+    margin-top: 10px;
+  }
+}
+
+.slider {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* ---------- the cards ---------- */
+.slide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Wide enough for a two-column "what's included" list — the whole point is
+     that the card never has to scroll. */
+  width: min(540px, 90vw);
+  /* Every card the same height: a conveyor with ragged card heights is exactly
+     the mess this replaced. */
+  height: var(--card-h);
+  will-change: transform, opacity;
+  /* GSAP writes the transform; without this the first paint flashes unpositioned
+     cards stacked on top of each other. */
+  opacity: 0;
+}
+
+/* The centred card is the one the customer is meant to act on. */
+.slide.active {
+  cursor: default;
+}
+.slide:not(.active) {
+  cursor: pointer;
+}
+
+/* Lift + ring the centred card, the same way the clips slider marks its active
+   video. Reaching into the child is deliberate: the slider decides which card
+   is "live", and the card shouldn't have to know it's in a carousel. */
+.slide.active > * {
+  box-shadow:
+    0 44px 90px -30px rgba(122, 31, 85, 0.45),
+    0 0 0 2px rgba(255, 105, 180, 0.5),
+    0 0 60px -14px rgba(255, 105, 180, 0.55);
+}
+
+/* ---------- hover-to-browse chevrons ---------- */
+.hint {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--pink-600, #db3a8d);
+  opacity: 0.4;
+  z-index: 30;
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 0 0 20px rgba(255, 105, 180, 0.6);
+  animation: hintPulse 2.2s ease-in-out infinite;
+}
+.hintLeft {
+  left: 1.2rem;
+}
+.hintRight {
+  right: 1.2rem;
+}
+@keyframes hintPulse {
+  0%,
+  100% {
+    opacity: 0.26;
+  }
+  50% {
+    opacity: 0.62;
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .hint {
+    display: none;
+  }
+}
+
+/* ---------- counter ---------- */
+/* Top-centre, not bottom: the stage is taller than a laptop viewport once the
+   section heading is above it, so a counter pinned to the bottom sat below the
+   fold. Above the card it's always in view with the card it refers to — and it
+   clears the "Best value" badge, which hangs off the card's top-LEFT corner. */
+.counter {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0.35rem;
+  display: flex;
+  gap: 0.9em;
+  z-index: 20;
+  padding: 0.3rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--pink-200, rgba(255, 105, 180, 0.32));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--pink-700, #9c2566);
+}
+
+/* ---------- pagination dots ---------- */
+.dots {
+  position: absolute;
+  right: 1.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  z-index: 40;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 105, 180, 0.35);
+  cursor: pointer;
+  transition: all 0.35s ease;
+}
+.dot:hover {
+  background: rgba(255, 105, 180, 0.7);
+  transform: scale(1.25);
+}
+.dotOn {
+  height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(var(--pink-500, #ff4fa8), #ffd9ee);
+  box-shadow: 0 0 12px rgba(255, 105, 180, 0.85);
+}
+
+/* ===================================================================
+   RESPONSIVE
+   =================================================================== */
+@media (max-width: 900px) {
+  .stage {
+    /* Same idea on a phone: a floor so a small handset (iPhone SE, 667px tall)
+       still shows the whole list. Extra chrome because the dots move to the
+       bottom and the counter pill to the top. */
+    --card-h: clamp(540px, 70vh, 575px);
+    --chrome: 100px;
+    margin-top: 24px;
+  }
+  .slide {
+    width: min(400px, 92vw);
+  }
+
+  /* dots move to the bottom so they never sit on top of a card */
+  .dots {
+    right: auto;
+    top: auto;
+    left: 50%;
+    bottom: calc(1.1rem + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    flex-direction: row;
+    gap: 0.45rem;
+  }
+  .dotOn {
+    height: 9px;
+    width: 26px;
+  }
+  .counter {
+    top: 0.2rem;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.68rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hint {
+    animation: none;
+  }
+}

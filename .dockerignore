@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.vercel
+backups
+.devdb
+*.md
+*.jpeg
+*.png
+!app/**
+!public/**
+.env
+.env*.local
+npm-debug.log*
+Dockerfile
+docker-compose*.yml
+images_and_videos

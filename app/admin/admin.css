@@ -1,0 +1,1472 @@
+/* Admin portal design system. Namespaced with .adm- so it never collides with
+   the marketing site. Light, clean, pink-accented internal tool. */
+:root {
+  --adm-pink: #ff69b4;
+  --adm-pink-600: #f64ea3;
+  --adm-pink-50: #fff4fa;
+  --adm-ink: #2a2230;
+  --adm-muted: #7a7280;
+  --adm-line: #ececf1;
+  --adm-bg: #f7f7fb;
+  --adm-card: #ffffff;
+  --adm-radius: 14px;
+  --adm-shadow: 0 1px 3px rgba(20, 10, 30, 0.06), 0 8px 24px -12px rgba(20, 10, 30, 0.12);
+}
+
+.adm-shell {
+  display: grid;
+  /* minmax(0,…) not 1fr: a plain 1fr track can't shrink below its content's
+     min-content width, so one horizontal scroller inside (the slot day strip)
+     would stretch the whole main column past the viewport. */
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--adm-bg);
+  color: var(--adm-ink);
+  font-family: var(--font, "Poppins", system-ui, sans-serif);
+}
+
+/* ---- sidebar ---- */
+.adm-side {
+  background: #fff;
+  border-right: 1px solid var(--adm-line);
+  padding: 20px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.adm-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 6px 10px 16px;
+  color: var(--adm-ink);
+}
+.adm-brand span.dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--adm-pink), #ffb3de);
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+}
+.adm-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #55505c;
+  font-weight: 500;
+  font-size: 0.92rem;
+  transition: background 0.15s, color 0.15s;
+}
+.adm-nav a:hover {
+  background: var(--adm-pink-50);
+  color: var(--adm-pink-600);
+}
+.adm-nav a.active {
+  background: linear-gradient(135deg, var(--adm-pink), #ff8fcb);
+  color: #fff;
+  box-shadow: 0 6px 16px -8px rgba(255, 105, 180, 0.8);
+}
+.adm-nav .glyph {
+  width: 20px;
+  text-align: center;
+}
+.adm-side-foot {
+  margin-top: auto;
+  border-top: 1px solid var(--adm-line);
+  padding-top: 12px;
+  font-size: 0.8rem;
+  color: var(--adm-muted);
+}
+.adm-side-foot form {
+  margin-top: 8px;
+}
+.adm-logout {
+  width: 100%;
+  border: 1px solid var(--adm-line);
+  background: #fff;
+  border-radius: 9px;
+  padding: 8px;
+  cursor: pointer;
+  color: #55505c;
+  font: inherit;
+  font-size: 0.85rem;
+}
+.adm-logout:hover {
+  border-color: var(--adm-pink);
+  color: var(--adm-pink-600);
+}
+
+/* ---- main ---- */
+.adm-main {
+  padding: 26px 30px 60px;
+  max-width: 1200px;
+  width: 100%;
+}
+.adm-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.adm-head h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.adm-head p {
+  color: var(--adm-muted);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+/* ---- cards / tiles ---- */
+.adm-grid {
+  display: grid;
+  gap: 16px;
+}
+.adm-stats {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+/* Two equal columns on desktop, single column on phones. Use instead of an
+   inline gridTemplateColumns so it actually collapses on mobile. */
+.adm-cols-2 {
+  grid-template-columns: 1fr 1fr;
+}
+.adm-tile {
+  background: var(--adm-card);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-radius);
+  padding: 18px;
+  box-shadow: var(--adm-shadow);
+}
+.adm-tile .k {
+  font-size: 0.78rem;
+  color: var(--adm-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.adm-tile .v {
+  font-size: 1.9rem;
+  font-weight: 800;
+  margin-top: 8px;
+  letter-spacing: -0.02em;
+}
+.adm-tile .sub {
+  font-size: 0.82rem;
+  color: var(--adm-muted);
+  margin-top: 2px;
+}
+.adm-card {
+  background: var(--adm-card);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-radius);
+  box-shadow: var(--adm-shadow);
+  overflow: hidden;
+}
+.adm-card-head {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--adm-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.adm-card-head h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.adm-card-body {
+  padding: 18px;
+}
+
+/* ---- table ---- */
+.adm-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--adm-radius);
+}
+table.adm-table {
+  width: 100%;
+  border-collapse: separate; /* separate so the sticky header keeps its border */
+  border-spacing: 0;
+  font-size: 0.88rem;
+}
+
+/* Header: tinted, sticky, and clearly divided from the data below. */
+.adm-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+  color: #6b4a5c;
+  font-weight: 800;
+  padding: 12px 14px;
+  background: var(--adm-pink-50);
+  border-bottom: 2px solid #f3c7de;
+  white-space: nowrap;
+}
+
+.adm-table td {
+  padding: 13px 14px;
+  /* Was #f4f4f8 — so faint the rows ran together. */
+  border-bottom: 1px solid #e9e4ee;
+  vertical-align: middle;
+}
+
+/* Zebra striping: the single biggest help when scanning a wide row. */
+.adm-table tbody tr:nth-child(even) td {
+  background: #faf8fc;
+}
+
+.adm-table tbody tr:hover td {
+  background: var(--adm-pink-50);
+}
+/* A pink edge marks the row under the cursor without shifting the layout. */
+.adm-table tbody tr td:first-child {
+  box-shadow: inset 3px 0 0 transparent;
+}
+.adm-table tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 var(--adm-pink);
+}
+
+.adm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.adm-strong {
+  font-weight: 700;
+}
+.adm-code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.82rem;
+  color: var(--adm-pink-600);
+  font-weight: 700;
+}
+
+/* ---- badges ---- */
+.adm-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ---- buttons ---- */
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--adm-line);
+  background: #fff;
+  color: var(--adm-ink);
+  border-radius: 9px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.adm-btn:hover {
+  border-color: var(--adm-pink);
+  color: var(--adm-pink-600);
+}
+.adm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.adm-btn-primary {
+  background: linear-gradient(135deg, var(--adm-pink), #ff8fcb);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 8px 18px -10px rgba(255, 105, 180, 0.9);
+}
+.adm-btn-primary:hover {
+  color: #fff;
+  filter: brightness(1.04);
+}
+.adm-btn-wa {
+  background: #25d366;
+  color: #fff;
+  border-color: transparent;
+}
+.adm-btn-wa:hover {
+  color: #fff;
+  filter: brightness(1.05);
+}
+.adm-btn-danger:hover {
+  border-color: #e5484d;
+  color: #c0392b;
+}
+.adm-btn-sm {
+  padding: 5px 9px;
+  font-size: 0.78rem;
+}
+.adm-btn-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ---- manual booking form ---- */
+.adm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.adm-form-h {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #db3a8d;
+  margin: 6px 0 0;
+}
+.adm-form-h:first-child {
+  margin-top: 0;
+}
+.adm-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.adm-field > span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b4a5c;
+}
+.adm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.adm-chip {
+  border: 1px solid var(--adm-line, #eadfe6);
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: #6b4a5c;
+}
+.adm-chip-on {
+  background: #ffe6f4;
+  border-color: #db3a8d;
+  color: #a12a6b;
+  font-weight: 600;
+}
+.adm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.84rem;
+  color: #6b4a5c;
+  cursor: pointer;
+}
+.adm-check input {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  margin-top: 1px;
+  accent-color: #db3a8d;
+}
+.adm-total {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b4a5c;
+}
+.adm-form-error {
+  background: #ffecec;
+  color: #c0392b;
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 0.86rem;
+  margin: 0;
+}
+
+/* ---- progress trail (what's actually been done) ---- */
+.adm-trail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 7px;
+}
+.adm-step {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.adm-step-done {
+  color: #1c7c3f;
+}
+.adm-step-off {
+  color: #b3a9bb;
+  font-weight: 500;
+}
+.adm-step em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--adm-muted);
+  font-size: 0.66rem;
+}
+/* Message composed but never actually sent — the one state worth chasing. */
+.adm-step-warn {
+  color: #b26a00;
+}
+.adm-step-warn em {
+  color: #b26a00;
+}
+
+/* ---- staff & admin logins table ---- */
+/* The inline "set a new password" box shares the actions cell. It sits outside
+   .adm-field, so it needs the field styling spelled out or it renders as a raw
+   browser input among styled buttons. */
+.adm-pw-input {
+  flex: 1 1 220px;
+  min-width: 0;
+  border: 1px solid var(--adm-line);
+  border-radius: 9px;
+  padding: 8px 11px;
+  font: inherit;
+  font-size: 0.88rem;
+  background: #fff;
+  color: var(--adm-ink);
+}
+.adm-pw-input:focus {
+  outline: none;
+  border-color: var(--adm-pink);
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.15);
+}
+.adm-pw-row {
+  flex-wrap: wrap;
+}
+/* Dates read as one unit — "26 Jul / 2026" split across lines looks like a fault. */
+.adm-logins td[data-label="Added"],
+.adm-logins td[data-label="Last sign-in"] {
+  white-space: nowrap;
+}
+
+/* The "add a login" form shares the card with the list, so it needs to look like a
+   separate block: a rule above it, and the SAME 14px gutter the table cells use.
+   With no padding it lined up under the LOGIN column and read as part of it. */
+.adm-logins-form {
+  /* 14px = the table cells' own gutter, so labels line up with the columns. */
+  padding: 16px 14px 18px;
+  border-top: 1px solid var(--adm-line);
+  margin-top: 2px;
+}
+/* In card mode each row is a card inset by its 4px edge plus 14px of padding —
+   18px lines the form up with the text inside those cards instead. */
+@media (max-width: 1199px) {
+  .adm-logins-form {
+    padding: 14px 18px 16px;
+  }
+}
+
+/* The logins table carries 5 columns AND a 4-button action cell, so it needs far
+   more room than the other admin tables — measured at ~646px for the table alone,
+   plus ~380px before the actions stop wrapping. With a 240px sidebar that means it
+   only fits comfortably from 1200px, so it stays in CARD mode below that instead of
+   the usual 767px. (At 901px it was being cut off by 47px, and from 960–1199 the
+   actions column was squeezed to 120–314px, stacking the buttons.)
+   These are the `adm-cards` rules re-applied for that band — plain CSS can't share
+   a rule block between two media queries. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  table.adm-logins,
+  table.adm-logins tbody {
+    display: block;
+    width: 100%;
+  }
+  table.adm-logins thead {
+    display: none;
+  }
+  table.adm-logins tr {
+    display: block;
+    border: 1px solid #e4dbe9;
+    border-left: 4px solid var(--adm-pink);
+    border-radius: 12px;
+    padding: 4px 14px;
+    margin-bottom: 12px;
+    background: #fff;
+    box-shadow: var(--adm-shadow);
+  }
+  table.adm-logins tbody tr:nth-child(even) td,
+  table.adm-logins tr:hover td,
+  table.adm-logins tr:hover td:first-child {
+    background: transparent;
+    box-shadow: none;
+  }
+  table.adm-logins td {
+    display: block;
+    position: relative;
+    padding: 8px 0 8px 40%;
+    border-bottom: 1px solid #f0eaf4;
+    text-align: right;
+  }
+  table.adm-logins td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 36%;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--adm-muted);
+  }
+  table.adm-logins td[data-label="Login"] {
+    padding-left: 0;
+    text-align: left;
+    border-bottom: 1px solid #e4dbe9;
+  }
+  table.adm-logins td[data-label="Login"]::before {
+    position: static;
+    display: block;
+    width: auto;
+    margin-bottom: 4px;
+  }
+  table.adm-logins td[data-label="Do"] {
+    padding: 10px 0 4px;
+    text-align: left;
+    border-bottom: none;
+  }
+  table.adm-logins td[data-label="Do"]::before {
+    content: none;
+  }
+}
+
+/* ---- one-time secrets (temp password / reset link) ----
+   Deliberately loud: it's shown once and can never be read back, so it must not
+   be mistaken for ordinary copy that will still be there after a reload. */
+.adm-handout {
+  border: 1px dashed #f3c7de;
+  background: var(--adm-pink-50);
+  border-radius: 11px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
+}
+.adm-secret {
+  display: inline-block;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #a12a6b;
+  background: #fff;
+  border: 1px solid #f3c7de;
+  border-radius: 7px;
+  padding: 4px 8px;
+  margin-top: 3px;
+  /* Long links must wrap rather than widen the card on a phone. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  user-select: all; /* one tap/click selects the whole thing to copy */
+}
+
+/* ---- slot management (free vs booked) ---- */
+/* The whole day as one bar: shape first, detail after. */
+.adm-slotbar {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+}
+.adm-sb {
+  flex: 1 1 0;
+  min-width: 3px;
+  height: 24px;
+  border-radius: 4px;
+  background: #eceaf1;
+}
+.adm-sb-free {
+  background: #b7ecce;
+}
+.adm-sb-booked {
+  background: var(--adm-pink);
+}
+/* One pet in, one place still sellable — must NOT look like a full slot, or the
+   salon turns away work it could take. */
+.adm-sb-partial {
+  background: #ffd79a;
+}
+.adm-sb-past {
+  background: #e2e0e8;
+}
+/* The slot happening right now — a thin dark edge, no colour change. */
+.adm-sb-now {
+  box-shadow: inset 0 0 0 2px #2a2230;
+}
+.adm-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  color: var(--adm-muted);
+  font-weight: 600;
+}
+.adm-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.adm-legend i {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* One row per slot. The left border carries the state, so a glance down the
+   edge reads free/booked without touching the text. */
+.adm-slots {
+  display: grid;
+  gap: 7px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.adm-slot {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border: 1px solid var(--adm-line);
+  border-left: 5px solid #d6d3dc;
+  border-radius: 11px;
+  padding: 10px 13px;
+  background: #fff;
+}
+.adm-slot .t {
+  flex: none;
+  width: 104px;
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+.adm-slot .t em {
+  display: block;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: var(--adm-muted);
+}
+.adm-slot-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.adm-slot-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.adm-slot-free {
+  border-left-color: #35a86a;
+  background: #f6fdf9;
+}
+.adm-slot-booked {
+  border-left-color: var(--adm-pink);
+  background: var(--adm-pink-50);
+}
+/* One pet in, still sellable — amber, so it can never be mistaken at a glance
+   for a full slot (pink) or an empty one (green). */
+.adm-slot-partial {
+  border-left-color: #e5a33a;
+  background: #fffaf0;
+}
+.adm-slot-past {
+  border-left-color: #d6d3dc;
+  background: #fafafc;
+}
+.adm-slot-warn {
+  border-left-color: #e5a33a;
+  background: #fffaf0;
+}
+.adm-slot-released {
+  border-left-color: #b9b4c2;
+  background: #fbfbfd;
+}
+/* The slot in progress right now — the row the salon is standing in. */
+.adm-slot-now {
+  box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.35);
+}
+.adm-slot-nowtag {
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  background: var(--adm-ink);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+}
+.adm-slot-tag {
+  display: inline-block;
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.adm-slot-tag.free {
+  background: #dff6e9;
+  color: #1c7c3f;
+}
+/* room for one more */
+.adm-slot-tag.partial {
+  background: #ffeccc;
+  color: #8a5a10;
+}
+/* every place taken */
+.adm-slot-tag.booked {
+  background: #ffd9ec;
+  color: #9c2566;
+}
+.adm-slot-tag.past {
+  background: #efeef3;
+  color: var(--adm-muted);
+}
+
+/* Prev / date / next as one segmented control. */
+.adm-daynav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.adm-daynav .adm-btn {
+  padding: 7px 12px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Two-week overview — which day is busy, one tap to open it. */
+.adm-daystrip {
+  display: flex;
+  gap: 8px;
+  min-width: 0; /* scroll the strip, never widen the page */
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.adm-day {
+  flex: 0 0 auto;
+  width: 96px;
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+  padding: 9px 8px;
+  text-align: center;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+}
+.adm-day:hover {
+  border-color: var(--adm-pink);
+}
+.adm-day.active {
+  border-color: var(--adm-pink);
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.16);
+}
+.adm-day .dw {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--adm-muted);
+}
+.adm-day .dd {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin-top: 1px;
+}
+.adm-day .dn {
+  font-size: 0.72rem;
+  color: var(--adm-muted);
+  margin-top: 2px;
+}
+.adm-day .bar {
+  height: 5px;
+  border-radius: 999px;
+  background: #eceaf1;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.adm-day .bar i {
+  display: block;
+  height: 100%;
+  background: var(--adm-pink);
+}
+.adm-day .dt {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--adm-pink-600);
+  margin-top: 4px;
+}
+.adm-day-closed {
+  background: #f7f7fa;
+}
+.adm-day-closed .dd {
+  color: var(--adm-muted);
+}
+/* Genuinely out of slots — worth noticing. */
+.adm-day-full .dn {
+  color: #c0392b;
+  font-weight: 700;
+}
+/* Nothing left because the day is simply over — not a problem, so stay quiet. */
+.adm-day-over {
+  background: #fbfbfd;
+}
+.adm-day-over .dd,
+.adm-day-over .dn {
+  color: var(--adm-muted);
+}
+
+/* Day summary tucked under the appointments filters. */
+.adm-slotsum {
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--adm-line);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  align-items: flex-start;
+}
+.adm-slotsum-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+}
+
+/* ---- closed days (holiday picker) ---- */
+.adm-holiday-add {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.adm-holiday-add input[type="date"] {
+  flex: 0 1 190px;
+}
+.adm-holidays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.adm-holiday {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--adm-pink-50);
+  border: 1px solid #f3c7de;
+  color: #a12a6b;
+  border-radius: 999px;
+  padding: 5px 6px 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.adm-holiday button {
+  border: none;
+  background: #f7d9e8;
+  color: #a12a6b;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.adm-holiday button:hover {
+  background: var(--adm-pink);
+  color: #fff;
+}
+/* Dates already gone — visibly de-emphasised, still removable. */
+.adm-holiday-past {
+  background: #f4f4f7;
+  border-color: var(--adm-line);
+  color: var(--adm-muted);
+  text-decoration: line-through;
+}
+.adm-holiday-past button {
+  background: #e7e7ee;
+  color: var(--adm-muted);
+}
+
+/* ---- grooming flow (before/after photos) ---- */
+.adm-groom {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.adm-thumbs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.adm-thumb {
+  margin: 0;
+  width: 68px;
+}
+.adm-thumb img {
+  width: 68px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--adm-line, #eadfe6);
+  background: #faf6f8;
+  display: block;
+}
+.adm-thumb figcaption {
+  font-size: 0.68rem;
+  color: #8a7681;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-top: 3px;
+}
+.adm-retake {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.66rem;
+  color: #db3a8d;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.adm-retake:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---- forms ---- */
+.adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.adm-field label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #55505c;
+}
+.adm-field input,
+.adm-field select,
+.adm-field textarea {
+  border: 1px solid var(--adm-line);
+  border-radius: 9px;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 0.9rem;
+  background: #fff;
+  color: var(--adm-ink);
+}
+.adm-field input:focus,
+.adm-field select:focus,
+.adm-field textarea:focus {
+  outline: none;
+  border-color: var(--adm-pink);
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.15);
+}
+.adm-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+/* A <select> is as wide as its longest option, and a grid/flex item refuses to
+   shrink below its content's min-width — so one long option label ("Admin — can
+   also manage logins & settings") dragged a whole form past the edge of a 360px
+   phone. min-width:0 lets the track shrink; max-width keeps the control inside it. */
+.adm-field select,
+.adm-field input,
+.adm-field textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.adm-row2 > *,
+.adm-grid-2 > *,
+.adm-form > * {
+  min-width: 0;
+}
+.adm-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+/* A select sized by its longest option (e.g. a full package name) would push
+   past a phone screen — clamp it to the row instead. min-width:0 is the half that
+   actually lets a flex item shrink; max-width alone can't beat min-content. */
+.adm-filters {
+  min-width: 0;
+}
+.adm-filters select,
+.adm-filters input {
+  min-width: 0;
+  max-width: 100%;
+}
+.adm-filters a,
+.adm-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--adm-line);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #55505c;
+  background: #fff;
+  cursor: pointer;
+}
+.adm-filters a.active,
+.adm-chip.active {
+  background: var(--adm-pink);
+  color: #fff;
+  border-color: transparent;
+}
+
+.adm-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--adm-muted);
+}
+.adm-empty .big {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+.adm-note {
+  font-size: 0.85rem;
+  color: var(--adm-muted);
+}
+.adm-error {
+  background: #ffecec;
+  color: #c0392b;
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.adm-ok {
+  background: #e8f7ee;
+  color: #1c7c3f;
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ---- mobile ---- */
+@media (max-width: 860px) {
+  .adm-shell {
+    /* minmax(0,…) for the same reason as the desktop rule above: a plain `1fr`
+       can't shrink below its content's min-content width, and one wide flex row
+       (the slot filters' package <select>) then stretched the whole page. Below
+       767px `.adm-main`'s overflow-x:hidden hid this, so it only showed between
+       768 and 860. */
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Sidebar becomes a compact top bar: brand + logout on one row, and the nav
+     as a single horizontally-scrollable strip of pills below. */
+  .adm-side {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .adm-brand {
+    padding: 0;
+    font-size: 1rem;
+  }
+  .adm-brand span.dot {
+    width: 26px;
+    height: 26px;
+    font-size: 0.95rem;
+  }
+  .adm-nav {
+    order: 3;
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .adm-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .adm-nav a {
+    flex: 0 0 auto; /* keep each label on one line; scroll instead of wrap */
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+  /* Collapse "Signed in as / name" to just the logout button, pushed right. */
+  .adm-side-foot {
+    margin: 0 0 0 auto;
+    border-top: none;
+    padding-top: 0;
+    font-size: 0;
+    display: flex;
+    align-items: center;
+  }
+  .adm-side-foot form {
+    margin-top: 0;
+  }
+  .adm-logout {
+    width: auto;
+    padding: 7px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .adm-main {
+    padding: 18px 14px 60px;
+  }
+  .adm-head h1 {
+    font-size: 1.3rem;
+  }
+  .adm-tile .v {
+    font-size: 1.55rem;
+  }
+  /* Any two-column layout stacks on phones. */
+  .adm-row2,
+  .adm-cols-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Opt-in: turn a wide table into compact stacked cards on phones. Each row is a
+   card; each cell shows its column name (data-label) on the left and the value on
+   the right — one tidy line per field. Add class "adm-cards" to the <table> and
+   data-label="…" to every <td>. Cells holding buttons/forms get data-label="Do"
+   and render full-width. */
+@media (max-width: 767px) {
+  /* Nothing may push the page wider than the screen — a single overflowing cell
+     makes every page scroll sideways and feel broken. */
+  .adm-main {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  .adm-head {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  /* Primary page action gets a full-width, thumb-sized target. */
+  .adm-head > a.adm-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 14px;
+  }
+  /* Same when the header holds a row of actions — they share the width. */
+  .adm-head > .adm-btn-row {
+    width: 100%;
+  }
+  .adm-head > .adm-btn-row > .adm-btn {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 11px 12px;
+  }
+
+  /* Slot rows stack: time on its own line, detail below at full width. */
+  .adm-slot {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .adm-slot .t {
+    width: auto;
+  }
+  .adm-slot .t em {
+    display: inline;
+    margin-left: 4px;
+  }
+  /* Thin bar + wider blocks so an 18-slot day still fits a phone screen. */
+  .adm-sb {
+    height: 30px;
+    border-radius: 3px;
+  }
+  .adm-day {
+    width: 84px;
+  }
+  /* The progress trail reads left-to-right even though card cells are right
+     aligned — a right-aligned column of ticks looks like a mistake. */
+  table.adm-cards .adm-trail {
+    align-items: flex-end;
+  }
+
+  table.adm-cards,
+  table.adm-cards tbody {
+    display: block;
+    width: 100%;
+  }
+  table.adm-cards thead {
+    display: none; /* column headers become each cell's inline label */
+  }
+  table.adm-cards tr {
+    display: block;
+    border: 1px solid #e4dbe9;
+    /* A pink edge separates one appointment card from the next at a glance. */
+    border-left: 4px solid var(--adm-pink);
+    border-radius: 12px;
+    padding: 4px 14px;
+    margin-bottom: 12px;
+    background: #fff;
+    box-shadow: var(--adm-shadow);
+  }
+  /* Striping doesn't apply once rows are cards — keep them all white. */
+  table.adm-cards tbody tr:nth-child(even) td,
+  table.adm-cards tr:hover td,
+  table.adm-cards tr:hover td:first-child {
+    background: transparent;
+    box-shadow: none;
+  }
+  /* value on the right, label absolutely placed on the left → compact one-liners */
+  table.adm-cards td {
+    display: block;
+    position: relative;
+    padding: 8px 0 8px 40%;
+    min-height: 1.4em;
+    border-bottom: 1px solid #f0eaf4;
+    text-align: right;
+    white-space: normal;
+    word-break: break-word;
+  }
+  table.adm-cards td:last-child {
+    border-bottom: none;
+  }
+  table.adm-cards td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 36%;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--adm-muted);
+  }
+  /* Full-width, un-labelled cells: spanning cells (empty states) and "Do" cells. */
+  table.adm-cards td[colspan] {
+    padding-left: 0;
+    text-align: left;
+  }
+  table.adm-cards td[colspan]::before {
+    content: none;
+  }
+  /* Long-text cells stack the label above a full-width value (no cramped column). */
+  table.adm-cards td[data-label="Message"],
+  table.adm-cards td[data-label="Notes"] {
+    padding-left: 0;
+    text-align: left;
+  }
+  table.adm-cards td[data-label="Message"]::before,
+  table.adm-cards td[data-label="Notes"]::before {
+    position: static;
+    display: block;
+    width: auto;
+    margin-bottom: 3px;
+  }
+  table.adm-cards td[data-label="Message"] { max-width: none !important; }
+  /* Action / form cells: no label gutter, content spans full width, left-aligned */
+  table.adm-cards td[data-label="Do"] {
+    padding: 10px 0 4px;
+    text-align: left;
+  }
+  table.adm-cards td[data-label="Do"]::before {
+    content: none;
+  }
+  table.adm-cards td[data-label="Do"] .adm-btn-row {
+    justify-content: flex-start;
+  }
+  table.adm-cards td[data-label="Do"] input,
+  table.adm-cards td[data-label="Do"] select {
+    flex: 1 1 auto;
+  }
+  /* Booking form goes single-column on a phone. */
+  .adm-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  /* ---- logins table on a phone ----
+     A 40% label gutter leaves ~200px for a value, which an email address can't
+     live in — it was breaking mid-word into a ragged right-aligned stack. Give
+     the identity cell the whole width, left aligned, with the label above it. */
+  table.adm-logins td[data-label="Login"] {
+    padding-left: 0;
+    text-align: left;
+    /* Name and email are the card's title — separate them from the fields below. */
+    border-bottom: 1px solid #e4dbe9;
+    padding-bottom: 10px;
+  }
+  table.adm-logins td[data-label="Login"]::before {
+    position: static;
+    display: block;
+    width: auto;
+    margin-bottom: 4px;
+  }
+  table.adm-logins td[data-label="Login"] .adm-strong {
+    font-size: 1rem;
+  }
+  /* Break only when a word genuinely cannot fit, not at the nearest character. */
+  table.adm-logins td[data-label="Login"] .adm-note {
+    display: inline-block;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.4;
+  }
+  /* Two thumb-sized actions per row instead of four cramped ones. */
+  table.adm-logins td[data-label="Do"] .adm-btn-row > .adm-btn {
+    flex: 1 1 calc(50% - 3px);
+    justify-content: center;
+    padding: 9px 10px;
+  }
+  /* The inline password box takes the full row above its Save/Cancel pair. */
+  table.adm-logins .adm-pw-input {
+    flex: 1 1 100%;
+  }
+  table.adm-logins .adm-pw-row > .adm-btn {
+    flex: 1 1 calc(50% - 3px);
+  }
+  /* Grooming is done phone-in-hand: the one action that matters gets a full-width,
+     thumb-sized target. The hidden file input must not be stretched with it. */
+  table.adm-cards td[data-label="Do"] .adm-groom .adm-btn-primary {
+    flex: 1 1 100%;
+    padding: 11px 14px;
+    font-size: 0.92rem;
+  }
+  .adm-thumb,
+  .adm-thumb img {
+    width: 84px;
+  }
+  .adm-thumb img {
+    height: 84px;
+  }
+}
+
+/* ===================================================================
+   Payment popup — "Paid & Completed" asks what was actually taken
+   before it settles the bill and opens the thank-you message.
+   =================================================================== */
+.adm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 20px max(16px, env(safe-area-inset-left))
+    calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
+  background: rgba(26, 20, 32, 0.5);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.adm-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  margin: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 20px 18px;
+  box-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.5);
+  /* The row this popup lives in is a flex row; without this the modal inherits
+     its cramped width and the fields squash. */
+  text-align: left;
+}
+
+.adm-modal h3 {
+  margin: 0;
+  font-size: 1.12rem;
+}
+
+.adm-field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--adm-muted);
+}
+
+/* Payment method as big tap targets rather than a dropdown — this is used
+   one-handed at the counter with a dog on the lead. */
+.adm-choice-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adm-choice {
+  flex: 1 1 auto;
+  min-width: 104px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid var(--adm-line);
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--adm-ink, #2a2230);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.adm-choice:hover {
+  border-color: var(--adm-pink);
+}
+
+.adm-choice.on {
+  border-color: var(--adm-pink);
+  background: var(--adm-pink-50);
+}

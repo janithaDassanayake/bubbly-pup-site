@@ -1,0 +1,11 @@
+/node_modules
+/.next
+/.devdb
+/backups
+/images_and_videos
+task.md
+*.tsbuildinfo
+Dockerfile
+docker-compose*.yml
+Caddyfile
+*.jpeg
