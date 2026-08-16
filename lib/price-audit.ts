@@ -12,6 +12,7 @@
 // Read-only on purpose. It reports, it never rewrites — a recorded payment is a
 // record of what changed hands, and only the salon can say what to do about it.
 import { prisma } from "./db";
+import { customerLabel } from "./format";
 
 export type PriceIssue = {
   id: string;
@@ -62,7 +63,7 @@ export async function findPriceIssues(): Promise<{
       id: a.id,
       code: a.code,
       dateISO: a.date.toISOString().slice(0, 10),
-      customer: a.customer.name,
+      customer: customerLabel(a.customer),
       phone: a.customer.phone,
       packageName: a.package.name,
       services: chosen.map((x) => x.name),

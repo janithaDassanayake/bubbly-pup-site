@@ -70,8 +70,9 @@ A self-hosted path also exists (`Dockerfile`, `docker-compose.prod.yml`, `Caddyf
   (public) and `new-password/` (session required, outside `(dash)` so the layout
   redirect can't loop) share `app/admin/AuthShell.tsx`.
 - `app/admin/auth-actions.ts` — the only UNAUTHENTICATED server actions (forgot/reset).
-- `app/admin/(dash)/*` — authed shell + pages: dashboard, appointments, slots,
-  pending, customers[/id], payments, reports, whatsapp, settings.
+- `app/admin/(dash)/*` — authed shell + pages: dashboard, appointments
+  (+ `new/` phone booking, `walk-in/` counter intake), slots, pending,
+  customers[/id], payments, reports, whatsapp, settings.
 - `app/admin/actions.ts` — server actions (status changes, payments, settings); each re-checks auth + writes an AuditLog.
 - `app/admin/(dash)/Filters.tsx` — live (debounced, button-less) search/filter client components.
 - `app/admin/(dash)/ActionButtons.tsx` — client status/payment/WhatsApp buttons.
@@ -80,7 +81,8 @@ A self-hosted path also exists (`Dockerfile`, `docker-compose.prod.yml`, `Caddyf
   `slot-map` (admin slot occupancy), `day-availability` (customer calendar day states), `whatsapp` (message + wa.me), `whatsapp-send`
   (optional Cloud API), `auth`/`session`, `password`/`password-policy`, `reset`
   (reset tokens), `mailer` (optional Resend), `site` (absolute URLs), `settings`,
-  `catalog`, `admin-data`, `booking-map`, `time`, `format`, `roles` (owner/staff).
+  `catalog`, `admin-data`, `reporting` (day/week/month aggregation), `source`
+  (online vs walk-in labels), `booking-map`, `time`, `format`, `roles` (owner/staff).
 - `prisma/schema.prisma` — data model; `prisma/seed.ts` — catalog + settings + admin.
 
 ## Conventions & key decisions (don't break these)
@@ -134,7 +136,97 @@ A self-hosted path also exists (`Dockerfile`, `docker-compose.prod.yml`, `Caddyf
   each step. Anything already gone — a past date, or an earlier slot today — is
   `past`, not free, so nothing invites a booking into the past.
 - **Status lifecycle** is in `lib/status.ts`. Final step is a single **"Paid & Completed"**
-  action: settles payment (defaults to price estimate) + completes + fires thank-you.
+  action: settles payment (defaults to the final price) + completes + fires thank-you.
+- **Two prices per appointment.** `priceEstimate` is what the package + add-ons come
+  to; `priceOverride` is the manual adjustment an admin types on Edit appointment —
+  a discount agreed at the desk, or extra for extra work/time. Read money through
+  `lib/price.ts` (`finalPrice()`), never `priceEstimate` alone, or a discount
+  quietly becomes full price on the payments screen. The estimate is deliberately
+  NOT overwritten: the original quote stays visible beside the adjusted one, and
+  `lib/price-audit.ts` keeps checking the calculation rather than flagging the
+  owner's decision as a mispricing bug. An edit that doesn't touch the price field
+  re-prices from the new package (the form posts the calculated total back), so a
+  stale discount can't ride along with a re-scoped booking.
+- **Two ways a booking arrives, one day list.** `Appointment.source` is `ONLINE`
+  (the customer reserved it on the website, written only by `/api/bookings`) or
+  `WALK_IN` (the salon entered it — counter or phone — written by every admin
+  form). The appointments page shows both together with a `SourceBadge` column
+  and can filter to one; `lib/source.ts` owns the wording and colours. The
+  migration backfilled history from the `APPOINTMENT_CREATE` AuditLog rows, which
+  are the only record of which side entered an old booking.
+- **A walk-in is not a reservation, and does not use the six slots.**
+  `/admin/appointments/walk-in` → `createWalkIn` takes a free-form `HH:MM`,
+  because the six slots (`lib/booking-slots.ts`) are what the WEBSITE may sell,
+  and a pet standing in the shop at 10:15 is not selling anything.
+  `validateSlotBooking` would refuse it outright, and staff would have to record
+  a time the pet didn't arrive at. The reservation grid is otherwise untouched:
+  `POST /api/bookings` still refuses every off-grid time it refused before.
+  Walk-ins are NOT invisible to it, though — `blockOccupancy` counts every active
+  booking in a service block whatever minute it sits on, so **adding a walk-in
+  reduces what the website will offer for that part of the day.** That fell out
+  of the existing rule; nothing was added for it. Don't "fix" it by exempting
+  walk-ins, or the salon will be double-booked by its own customers.
+  `/admin/appointments/new` is the other form and is deliberately different: it
+  mirrors the customer's reservation flow, six slots and all, for a booking taken
+  over the phone for a future day.
+- **A walk-in may have no phone number.** `Customer.phone` is the UNIQUE identity
+  key and is read as a string by the WhatsApp composer and a dozen screens, so it
+  was NOT made nullable. Instead `walkInPlaceholderPhone(code)` in `lib/phone.ts`
+  writes `walk-in:BP-XXXXXX` — never digits, so it can't collide with
+  `toStoredPhone` output or be mistaken for something dialable. One row per
+  walk-in, never a shared "walk-ins" account, which would collect every pet the
+  salon ever bathed under one customer and top every frequent-customer report.
+  Everything that would message a customer asks **`canWhatsApp(phone)`** first
+  (`waPreviews` returns no links, `changeStatus` queues no Notification), and
+  `formatPhone` prints "No number". Give a walk-in a real number and it becomes a
+  normal customer: the row is reused, and a pet with the same name is reused too.
+- **The walk-in price is typed, and lands in `priceOverride`.** `priceEstimate`
+  still holds what the catalogue says (same formula `lib/price-audit.ts` checks,
+  standalone rows included), so a hand-priced walk-in is never reported as a
+  pricing bug; only a figure that actually differs is stored as an override, or
+  every walk-in would print "adjusted · was …". Ticking "Paid in full now" is the
+  counter path: COMPLETED + a settled Payment in one submit. Leaving it unticked
+  is normal — the visit settles later through "Paid & Completed" and shows as
+  *still owed* in the reports meanwhile.
+- **Reports (`lib/reporting.ts`) answer day / week / month from one query.** Three
+  rules, and every table on the page obeys all three: an appointment belongs to
+  the day it was **booked for** (`Appointment.date`), not the day it was typed in;
+  **revenue is money that changed hands** (a settled `Payment.amount`) with
+  anything unpaid counted separately as *expected*; cancellations and no-shows are
+  counted but are not appointments served. `source` only ever SPLITS a total — it
+  never filters one — so online + walk-in always equals the whole. The breakdowns
+  are folded from ONE `findMany` rather than several `groupBy` calls, because
+  `finalPrice()` isn't expressible in SQL without duplicating `lib/price.ts` and
+  because sub-totals only agree if they come from the same rows. Every day in the
+  range gets a row even when it's empty — a gap reads as data that failed to load,
+  not as a day nobody came in. The period is driven by a **plain date input**
+  snapped to its week/month, not `<input type="week">`/`type="month"`, which
+  Firefox renders as bare text boxes. The "Payment summary" panel is the one thing
+  keyed on the day money was *received* (`lib/admin-data.ts` `reportData`), and
+  says so, so the two totals can't silently disagree.
+- **One reservation per phone number per day** (`lib/one-per-day.ts`). The phone
+  IS the customer's identity (`Customer.phone` is UNIQUE), so this holds across
+  devices and browsers, and across however they spelled the number that day —
+  `toStoredPhone` normalises before the lookup, so `+94 77 …` and `077 …` are one
+  person. CANCELLED / NO_SHOW / COMPLETED do NOT block: a booking that fell
+  through or a visit that already happened must not leave the customer with no
+  way to book but a phone call.
+  **Enforced in two places on purpose.** The authority is inside the
+  `POST /api/bookings` transaction, under the same per-date advisory lock as the
+  slot check — two tabs and a replayed request both land there. But that alone
+  is too late to be useful: the form opens WhatsApp *synchronously in the click
+  gesture* (see the client-booking-flow note above), so a 409 arrives after the
+  customer has already messaged us saying they booked. So `GET
+  /api/bookings/existing` is called as soon as the date and the number are both
+  known, disabling the button and showing the reason before there is anything to
+  tap. It fails OPEN on a network error — the POST still enforces the rule, and
+  refusing a customer because a courtesy check timed out is the worse failure.
+  The API answers 409 with `reason: "already-booked"` so the client can tell it
+  apart from a taken slot: one says "pick another time", the other says "talk to
+  us", and they are opposite advice.
+  **The admin forms deliberately do NOT enforce it.** The salon is the party a
+  blocked customer is told to contact, so the one account that must be able to
+  make the second booking is the salon's own.
 - **Admin tables go to cards on mobile:** add `adm-cards` to the `<table>` and
   `data-label="…"` to every `<td>` (long text uses `Message`/`Notes` labels; button/
   form cells use `data-label="Do"`). Breakpoint 767px. Styles in `app/admin/admin.css`

@@ -111,8 +111,10 @@ export async function reportData(fromISO: string, toISO: string) {
     cancelled: statusCount(AppointmentStatus.CANCELLED),
     noShow: statusCount(AppointmentStatus.NO_SHOW),
     popularPackages: popularPackages.map((p) => ({ name: pkgName(p.packageId), count: p._count })),
+    // `name` is only set for customers saved before the salon stopped asking
+    // for one; the phone is what identifies the row either way.
     frequentCustomers: frequentCustomers.map((c) => ({
-      name: cust(c.customerId)?.name ?? "—",
+      name: cust(c.customerId)?.name ?? null,
       phone: cust(c.customerId)?.phone ?? "",
       visits: c._count,
     })),

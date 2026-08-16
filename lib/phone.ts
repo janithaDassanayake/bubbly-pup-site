@@ -71,6 +71,9 @@ export function phoneProblem(input: string, cc: string = DEFAULT_CC): string | n
 
 /** Pretty form for display: +94 71 234 5678. */
 export function formatPhone(input: string, cc: string = DEFAULT_CC): string {
+  // A walk-in recorded without a number: say so, rather than printing the
+  // sentinel or letting toE164Digits strip it into a nonsense "+123".
+  if (isWalkInPlaceholder(input)) return "No number";
   const d = toE164Digits(input, cc);
   if (!d) return input;
   if (d.startsWith(cc) && LK_MOBILE.test(d.slice(cc.length))) {
@@ -79,3 +82,36 @@ export function formatPhone(input: string, cc: string = DEFAULT_CC): string {
   }
   return `+${d}`;
 }
+
+/**
+ * A walk-in who wouldn't leave a number still has to become a `Customer` row —
+ * the appointment can't exist without one, and `Customer.phone` is the UNIQUE
+ * identity key, so it can't be blank either.
+ *
+ * The placeholder is deliberately NOT a number: `toStoredPhone` only ever emits
+ * digits, so a value carrying this prefix can never collide with a real
+ * customer, and it can never be mistaken for one that could be dialled or
+ * messaged. It carries the booking code so a row is still traceable to its
+ * visit.
+ *
+ * Making `Customer.phone` nullable was the alternative and was rejected: the
+ * column is the identity of every customer in the system and is read as a
+ * string by the WhatsApp composer, the look-up-by-phone repeat-client check and
+ * a dozen screens. A sentinel that fails ONE predicate (`canWhatsApp`) is a far
+ * smaller blast radius than a null every one of those has to learn about.
+ */
+const WALK_IN_PREFIX = "walk-in:";
+
+export const walkInPlaceholderPhone = (code: string) => `${WALK_IN_PREFIX}${code}`;
+
+export const isWalkInPlaceholder = (phone: string) =>
+  (phone || "").startsWith(WALK_IN_PREFIX);
+
+/**
+ * Can this row actually be sent a WhatsApp? Everything that composes a message,
+ * queues a Notification or renders a send button must ask this first — `wa.me`
+ * builds a perfectly valid-looking link for a placeholder and the failure only
+ * shows up when someone taps send.
+ */
+export const canWhatsApp = (phone: string, cc: string = DEFAULT_CC) =>
+  !isWalkInPlaceholder(phone) && isValidPhone(phone, cc);

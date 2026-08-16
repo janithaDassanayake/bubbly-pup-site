@@ -7,17 +7,14 @@ import { formatPhone, PHONE_HINT, phoneProblem } from "@/lib/phone";
 // default — the common case is reading the number, not changing it.
 export default function EditContact({
   id,
-  name: name0,
   phone: phone0,
   email: email0,
 }: {
   id: string;
-  name: string;
   phone: string;
   email: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(name0);
   const [phone, setPhone] = useState(phone0);
   const [email, setEmail] = useState(email0 ?? "");
   const [error, setError] = useState("");
@@ -32,7 +29,7 @@ export default function EditContact({
     if (bad) return setError(bad);
     start(async () => {
       try {
-        const r = await updateCustomerContact({ id, name, phone, email });
+        const r = await updateCustomerContact({ id, phone, email });
         if (!r.ok) return setError(r.error ?? "Couldn't save the changes.");
         setMsg("Saved ✓ Queued WhatsApp messages now point at the new number.");
         setOpen(false);
@@ -57,10 +54,6 @@ export default function EditContact({
   return (
     <form onSubmit={submit} style={{ marginTop: 10, maxWidth: 460 }}>
       {error && <p className="adm-error" style={{ marginBottom: 12 }}>{error}</p>}
-      <div className="adm-field">
-        <label htmlFor="cc-name">Name</label>
-        <input id="cc-name" value={name} onChange={(e) => setName(e.target.value)} required />
-      </div>
       <div className="adm-field">
         <label htmlFor="cc-phone">WhatsApp number</label>
         <input
@@ -92,7 +85,6 @@ export default function EditContact({
           onClick={() => {
             setOpen(false);
             setError("");
-            setName(name0);
             setPhone(phone0);
             setEmail(email0 ?? "");
           }}

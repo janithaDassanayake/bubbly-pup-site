@@ -13,19 +13,28 @@ export const viewport: Viewport = {
 // Local search is the whole game for a single-location salon: people type
 // "dog grooming Kadawatha", not "dog grooming". The town belongs in the title,
 // the description and the keywords — it was previously only ever "Sri Lanka".
+//
+// Cats are searched for separately ("cat grooming near me" never matches a page
+// that only ever says dog), so they carry their own keywords rather than being
+// folded into a generic "pet grooming".
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: `${SITE.name} | Dog Grooming Salon in ${SITE.city}`,
+  // "Salon" is dropped from the title to make room for cats — Google truncates
+  // around 60 characters and the town is the half that has to survive.
+  title: `${SITE.name} | Dog & Cat Grooming in ${SITE.city}`,
   description:
-    `Professional, gentle dog grooming in ${SITE.city} — spa baths, haircuts, ` +
-    `full grooming and nail care. Open ${SITE.location}-wide for pickup. ` +
-    `Book instantly on WhatsApp: ${SITE.whatsappDisplay}.`,
+    `Professional, gentle dog and cat grooming in ${SITE.city} — spa baths, ` +
+    `haircuts, full grooming and nail care. Open ${SITE.location}-wide for ` +
+    `pickup. Book instantly on WhatsApp: ${SITE.whatsappDisplay}.`,
   keywords: [
     `dog grooming ${SITE.city}`,
+    `cat grooming ${SITE.city}`,
     `pet grooming ${SITE.city}`,
     "dog grooming near me",
+    "cat grooming near me",
     "pet grooming salon Sri Lanka",
     "dog spa bath Kadawatha",
+    "cat grooming salon Kadawatha",
     "dog haircut Kadawatha",
     SITE.name,
   ],
@@ -37,8 +46,8 @@ export const metadata: Metadata = {
     url: siteUrl(),
     siteName: SITE.name,
     locale: "en_LK",
-    title: `${SITE.name} | Dog Grooming Salon in ${SITE.city}`,
-    description: `Gentle, professional dog grooming in ${SITE.city}. Book instantly on WhatsApp.`,
+    title: `${SITE.name} | Dog & Cat Grooming in ${SITE.city}`,
+    description: `Gentle, professional dog and cat grooming in ${SITE.city}. Book instantly on WhatsApp.`,
     // Shared links (WhatsApp especially) showed no preview card at all before.
     images: [
       {
@@ -51,8 +60,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE.name} | Dog Grooming Salon in ${SITE.city}`,
-    description: `Gentle, professional dog grooming in ${SITE.city}. Book instantly on WhatsApp.`,
+    title: `${SITE.name} | Dog & Cat Grooming in ${SITE.city}`,
+    description: `Gentle, professional dog and cat grooming in ${SITE.city}. Book instantly on WhatsApp.`,
     images: ["/media/logo.png"],
   },
   robots: { index: true, follow: true },

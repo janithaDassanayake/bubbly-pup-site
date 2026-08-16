@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { salonNow, dateOnly, addDaysISO, formatDateLabel } from "@/lib/time";
 import { to12h } from "@/lib/booking-engine";
 import { bookingConfirmationBody, waLink } from "@/lib/whatsapp";
+import { formatPhone } from "@/lib/phone";
+import { petIcon } from "@/lib/pet";
 import { getSettings } from "@/lib/settings";
 import { waPreviews } from "@/lib/admin-wa";
 import StatusBadge from "../StatusBadge";
@@ -115,7 +117,6 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
               note?.body ??
                 bookingConfirmationBody({
                   businessName,
-                  ownerName: a.customer.name,
                   petName: a.pet.name,
                   packageName: a.package.name,
                   dateLabel: formatDateLabel(a.date),
@@ -132,10 +133,11 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
                       <StatusBadge status={a.status} />
                     </div>
                     <div className="adm-strong" style={{ fontSize: "1.05rem" }}>
-                      {a.customer.name} · {a.customer.phone}
+                      {a.customer.name ? `${a.customer.name} · ` : ""}
+                      {formatPhone(a.customer.phone)}
                     </div>
                     <div className="adm-note" style={{ marginTop: 2 }}>
-                      🐶 {a.pet.name}{a.pet.breed ? ` (${a.pet.breed})` : ""} · 🧴 {a.package.name}
+                      {petIcon(a.pet.species)} {a.pet.name}{a.pet.breed ? ` (${a.pet.breed})` : ""} · 🧴 {a.package.name}
                     </div>
                     <div className="adm-note" style={{ marginTop: 2 }}>
                       📅 {formatDateLabel(a.date)} · ⏰ {to12h(a.startMin)}–{to12h(a.endMin)}

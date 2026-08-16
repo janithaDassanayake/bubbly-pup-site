@@ -2,7 +2,9 @@ import { AppointmentStatus, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { formatDateLabel } from "@/lib/time";
 import { to12h } from "@/lib/booking-engine";
-import { formatLKR } from "@/lib/format";
+import { formatLKR, customerLabel } from "@/lib/format";
+import { finalPrice, isPriceAdjusted } from "@/lib/price";
+import { formatPhone } from "@/lib/phone";
 import { PayForm } from "../ActionButtons";
 
 export const dynamic = "force-dynamic";
@@ -47,10 +49,15 @@ export default async function PaymentsPage() {
                 {awaiting.map((a) => (
                   <tr key={a.id}>
                     <td className="adm-code" data-label="Code">{a.code}</td>
-                    <td data-label="Customer">{a.customer.name}<br /><span className="adm-note">{a.customer.phone}</span></td>
+                    <td data-label="Customer">{customerLabel(a.customer)}{a.customer.name ? <><br /><span className="adm-note">{formatPhone(a.customer.phone)}</span></> : null}</td>
                     <td data-label="Pet / Package">{a.pet.name}<br /><span className="adm-note">{a.package.name}</span></td>
-                    <td className="adm-strong" data-label="Estimate">{formatLKR(a.priceEstimate)}</td>
-                    <td data-label="Do"><PayForm id={a.id} suggested={a.payment?.amount || a.priceEstimate} /></td>
+                    <td className="adm-strong" data-label="Estimate">
+                      {formatLKR(finalPrice(a))}
+                      {isPriceAdjusted(a) ? (
+                        <><br /><span className="adm-note">adjusted · was {formatLKR(a.priceEstimate)}</span></>
+                      ) : null}
+                    </td>
+                    <td data-label="Do"><PayForm id={a.id} suggested={a.payment?.amount || finalPrice(a)} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -74,7 +81,7 @@ export default async function PaymentsPage() {
                   <tr key={p.id}>
                     <td data-label="Paid on">{p.paidDate ? formatDateLabel(p.paidDate) : "—"}</td>
                     <td className="adm-code" data-label="Code">{p.appointment.code}</td>
-                    <td data-label="Customer">{p.appointment.customer.name}</td>
+                    <td data-label="Customer">{customerLabel(p.appointment.customer)}</td>
                     <td data-label="Package">{p.appointment.package.name}</td>
                     <td data-label="Method">{p.method ? METHOD_LABEL[p.method] : "—"}</td>
                     <td className="adm-strong" data-label="Amount">{formatLKR(p.amount)}</td>

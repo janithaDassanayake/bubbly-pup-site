@@ -4,7 +4,6 @@ import { daySlotMap, rangeSlotSummary, type SlotBooking } from "@/lib/slot-map";
 import { to12h } from "@/lib/booking-engine";
 import { addDaysISO, dateOnly, formatDateLabel, salonNow } from "@/lib/time";
 import StatusBadge from "../StatusBadge";
-import SlotStrip, { SlotLegend } from "../SlotStrip";
 import { SlotFilters } from "../Filters";
 
 export const dynamic = "force-dynamic";
@@ -29,17 +28,20 @@ export default async function SlotsPage({ searchParams }: { searchParams: Promis
     rangeSlotSummary(addDaysISO(date, -STRIP_LOOKBACK), STRIP_DAYS),
   ]);
 
-  const { timeline, counts, released, fits } = map;
-  // Occupancy counts places sold, not steps touched: a step holding one pet out
-  // of two is half sold, and calling it 100% busy would hide sellable capacity.
-  const places = counts.total * map.capacity;
-  const sold = counts.full * map.capacity + counts.partial;
-  const occupancy = places ? Math.round((sold / places) * 100) : 0;
-
-  // Detail is printed once per booking, on the first step it occupies; the steps
-  // it continues into just point back at it, so a 2-hour groom reads as one
-  // block instead of four identical rows.
-  const seen = new Set<string>();
+  const { timeline, counts, released, fits, slots } = map;
+  // Everything here is counted in BOOKABLE START TIMES — the thing the salon
+  // sells, one client each — never in half-hour steps of the clock. Counting
+  // steps would call 10:00 "free" on a day when nothing can start at 10:00 at
+  // all, which is exactly the disagreement with the customer's form this page
+  // must never have.
+  const freeStarts = slots.filter((s) => !s.taken).length;
+  const bookedStarts = slots.filter((s) => s.bookings.length > 0).length;
+  const occupancy = slots.length ? Math.round((bookedStarts / slots.length) * 100) : 0;
+  // Bookings sitting on a time the salon no longer offers — still real.
+  const offered = new Set(slots.map((s) => s.min));
+  const strays = timeline.cells.flatMap((c) => c.booked).filter((b, i, a) =>
+    !offered.has(b.start) && a.findIndex((x) => x.id === b.id) === i
+  );
 
   return (
     <>
@@ -49,7 +51,7 @@ export default async function SlotsPage({ searchParams }: { searchParams: Promis
           <p>
             {formatDateLabel(dateOnly(date))}
             {date === todayISO ? " · today" : ""} · open {map.openTime}–{map.closeTime} ·{" "}
-            {map.slotStepMin}-min slots
+            {slots.length} booking time{slots.length === 1 ? "" : "s"} · one client each
           </p>
         </div>
         <div className="adm-btn-row">
@@ -152,21 +154,18 @@ export default async function SlotsPage({ searchParams }: { searchParams: Promis
           <div className="adm-grid adm-stats" style={{ marginBottom: 16 }}>
             <div className="adm-tile">
               <div className="k">
-                <span>🟢</span> Free slots
+                <span>🟢</span> Bookable times
               </div>
-              <div className="v">{counts.free + counts.partial}</div>
+              <div className="v">{freeStarts}</div>
               <div className="sub">
-                of {counts.total} slots
-                {counts.partial > 0
-                  ? ` · ${counts.partial} with 1 of ${map.capacity} taken`
-                  : ""}
+                of {slots.length} time{slots.length === 1 ? "" : "s"} today
               </div>
             </div>
             <div className="adm-tile">
               <div className="k">
-                <span>🔴</span> Full slots
+                <span>🔴</span> Booked times
               </div>
-              <div className="v">{counts.full}</div>
+              <div className="v">{bookedStarts}</div>
               <div className="sub">
                 {counts.bookings} appointment{counts.bookings === 1 ? "" : "s"}
               </div>
@@ -176,7 +175,9 @@ export default async function SlotsPage({ searchParams }: { searchParams: Promis
                 <span>📊</span> Occupancy
               </div>
               <div className="v">{occupancy}%</div>
-              <div className="sub">{counts.gone > 0 ? `${counts.gone} slots already passed` : "of the whole day"}</div>
+              <div className="sub">
+                {bookedStarts} of {slots.length} time{slots.length === 1 ? "" : "s"} taken
+              </div>
             </div>
             {fits && (
               <div className="adm-tile">
@@ -189,89 +190,82 @@ export default async function SlotsPage({ searchParams }: { searchParams: Promis
             )}
           </div>
 
+          {/* The day, slot by slot — six individual start times, one client
+              each. Nothing is grouped: booking 09:00 leaves 09:30 open, which
+              is the whole point of the individual-slot rule. */}
           <div className="adm-card">
             <div className="adm-card-head">
               <h2>The day, slot by slot</h2>
-              <SlotLegend gone={counts.gone > 0} partial={map.capacity > 1} />
+              <span className="adm-note">
+                One client per time · {slots.length} slots a day
+              </span>
             </div>
             <div className="adm-card-body">
-              <SlotStrip cells={timeline.cells} capacity={map.capacity} />
-
               {fits && (
-                <p className="adm-note" style={{ margin: "12px 0 0" }}>
-                  🎯 marks slots where a <strong>{fits.name}</strong> ({fits.durationMin} min) can
-                  actually start — a free {map.slotStepMin}-min gap isn't always long enough.
+                <p className="adm-note" style={{ margin: "0 0 12px" }}>
+                  🎯 marks times still open for <strong>{fits.name}</strong> (
+                  {fits.durationMin} min).
                 </p>
               )}
 
-              <ul className="adm-slots" style={{ marginTop: 14 }}>
-                {timeline.cells.map((c) => {
-                  // Four states, each with its own colour, so the row can be read
-                  // without counting the bookings printed inside it. A slot with
-                  // one pet is NOT the same as a full one — it's still sellable.
-                  const state = c.full
-                    ? "booked"
-                    : c.booked.length
-                    ? "partial"
-                    : c.past
-                    ? "past"
-                    : "free";
-                  const statusLabel = c.full
-                    ? `Full · ${c.booked.length} of ${map.capacity}`
-                    : c.booked.length
-                    ? `Room for ${map.capacity - c.booked.length} more · ${c.booked.length} of ${map.capacity}`
-                    : c.past
-                    ? "Time passed"
-                    : "Free";
-                  const canStart = fits?.starts.has(c.startMin) ?? false;
-                  const lines = c.booked.map((bk) => {
-                    const isFirst = !seen.has(bk.id);
-                    seen.add(bk.id);
-                    return { bk, isFirst };
-                  });
-
+              <ul className="adm-slots">
+                {slots.map((s) => {
+                  // Keyed off `taken`, not off whether a booking sits on this
+                  // exact minute: a slot also closes when its part of the day is
+                  // full — which is how a dog booked at 11:00 closes 09:00/09:30.
+                  const state = s.reason === "passed" ? "past" : s.taken ? "booked" : "free";
+                  const canStart = fits?.starts.has(s.min) ?? false;
+                  const isNow =
+                    map.nowMin !== undefined &&
+                    map.nowMin >= s.min &&
+                    map.nowMin < s.min + map.slotStepMin;
                   return (
                     <li
-                      key={c.startMin}
-                      className={`adm-slot adm-slot-${state}${c.current ? " adm-slot-now" : ""}`}
+                      key={s.min}
+                      className={`adm-slot adm-slot-${state}${isNow ? " adm-slot-now" : ""}`}
                     >
-                      <span className="t">
-                        {to12h(c.startMin)}
-                        <em>to {to12h(c.endMin)}</em>
-                      </span>
+                      <span className="t">{s.label}</span>
                       <div className="adm-slot-body">
-                        {/* The status badge is always present — a slot holding
-                            one pet used to show only that booking, leaving the
-                            reader to work out whether it was still sellable. */}
                         <span className={`adm-slot-tag ${state}`}>
-                          {canStart && !c.past && !c.full ? "🎯 " : ""}
-                          {statusLabel}
+                          {canStart ? "🎯 " : ""}
+                          {s.reason === "passed"
+                            ? "Time passed"
+                            : s.bookings.length
+                            ? "Booked"
+                            : s.taken
+                            ? "This part of the day is full"
+                            : "Free"}
                         </span>
-                        {c.booked.length === 0 ? (
-                          fits && !c.past && !canStart ? (
-                            <span className="adm-note">
-                              Free, but not enough room for {fits.durationMin} min
-                            </span>
-                          ) : null
-                        ) : (
-                          lines.map(({ bk, isFirst }) => (
-                            <BookedLine key={bk.id} b={bk} first={isFirst} />
-                          ))
-                        )}
-                        {/* Two pets at once is normal now — it's what the second
-                            place is FOR. Only flag it when the count is above
-                            what the salon can actually handle, which can happen
-                            if capacity was lowered after these were booked. */}
-                        {c.booked.length > map.capacity && (
+                        {s.bookings.map((b) => (
+                          <BookedLine key={b.id} b={b} first />
+                        ))}
+                        {/* Only possible if `capacity` was raised above one, or
+                            two rows were written before this rule existed. */}
+                        {s.bookings.length > map.capacity && (
                           <span className="adm-note" style={{ color: "#c0392b", fontWeight: 600 }}>
-                            ⚠ {c.booked.length} pets booked — more than the {map.capacity} you can groom at once
+                            ⚠ {s.bookings.length} bookings on one time
                           </span>
                         )}
                       </div>
-                      {c.current && <span className="adm-slot-nowtag">now</span>}
+                      {isNow && <span className="adm-slot-nowtag">now</span>}
                     </li>
                   );
                 })}
+
+                {/* A booking at a time no longer offered — made under an older
+                    grid, or moved by hand. It holds that minute even though no
+                    slot row can show it, so surface it rather than lose it. */}
+                {strays.map((b) => (
+                  <li key={b.id} className="adm-slot adm-slot-partial">
+                    <span className="t">{to12h(b.start)}</span>
+                    <div className="adm-slot-body">
+                      <span className="adm-slot-tag partial">
+                        Not one of today&apos;s start times
+                      </span>
+                      <BookedLine b={b} first />
+                    </div>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

@@ -216,9 +216,9 @@ export default async function SettingsPage() {
         <div className="adm-card-head">
           <h2>Add-ons & extras</h2>
           <p>
-            The services in the website&apos;s <strong>Spa Treatments</strong> and{" "}
-            <strong>Trims, Cuts &amp; Colour</strong> pickers. Edit these to change what
-            a customer is quoted for an extra.
+            The services in the website&apos;s <strong>Spa &amp; Treatments</strong> and{" "}
+            <strong>Individual Grooming Services</strong> pickers. Edit these to change
+            what a customer is quoted for an extra.
           </p>
         </div>
         <div className="adm-table-wrap">

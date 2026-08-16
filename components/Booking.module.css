@@ -178,6 +178,69 @@
   box-shadow: var(--shadow-pink);
 }
 
+/* ---------- pet type ---------- */
+/* Buttons rather than a <select>: there are only two answers, each recognisable
+   at a glance by its icon, and this is the choice the rest of the form bends
+   around — it deserves to be seen, not opened.
+
+   Sized to match .toggleBtn exactly (same padding, radius and type), so Pet Type
+   and the aggression toggle below it read as the same kind of control. Stacking
+   the icon above the label made them twice the height of every other field and
+   turned the first question in the form into a billboard. */
+.petTypes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.petCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 13px;
+  border: 2px solid var(--pink-100);
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.petCard:hover {
+  border-color: var(--pink-300);
+}
+
+.petEmoji {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.petCardOn {
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--shadow-pink);
+}
+
+/* Small helper line under a control — guidance, not an error, so it stays
+   quiet next to the label above it. */
+.fieldNote {
+  margin-top: 7px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #9c2566;
+}
+
+.fieldNote strong {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* Full-bleed wrapper so the slot grid isn't squeezed into half a row. */
 .fieldWide {
   display: block;
@@ -188,9 +251,12 @@
 /* Buttons instead of a <select> so a booked time can be shown greyed and struck
    through — browsers refuse to style <option>, and hiding taken times made the
    salon look closed rather than busy. */
+/* All six start times on ONE row. Fixed to the number of slots rather than
+   auto-filling: auto-fill wrapped 6 into 4+2, and a day's times read as a
+   sequence — 9am through 3.30pm — which a broken row hides. */
 .slotGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -260,13 +326,35 @@
   text-align: center;
 }
 
-@media (max-width: 480px) {
+/* Six across still fits a phone, but only by giving the type and padding back.
+   Two steps rather than one so the squeeze arrives late: a 12-hour time is 8
+   characters and there is nothing left to trim after this. */
+@media (max-width: 620px) {
   .slotGrid {
-    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 6px;
   }
   .slot {
-    font-size: 0.86rem;
-    padding: 10px 6px;
+    font-size: 0.78rem;
+    padding: 10px 3px;
+  }
+  .slotTag {
+    font-size: 0.54rem;
+    letter-spacing: 0.02em;
+  }
+}
+
+@media (max-width: 420px) {
+  .slotGrid {
+    gap: 4px;
+  }
+  .slot {
+    font-size: 0.68rem;
+    padding: 9px 2px;
+    border-width: 1.5px;
+  }
+  .slotTag {
+    font-size: 0.48rem;
+    letter-spacing: 0;
   }
 }
 
@@ -821,4 +909,64 @@
   .card {
     padding: 24px 20px;
   }
+}
+
+/* ---------- already booked this day ----------
+   Shown inside the form card, directly above the submit, once the date and the
+   number together say this customer is already holding a slot that day.
+
+   Amber, not red: nothing has gone wrong and the customer has made no mistake —
+   they are simply already booked. Red would read as a rejected form and send
+   them hunting for a field to fix. It carries its own way out, because "contact
+   us" with nothing to tap is a dead end on the phone most of them are holding. */
+.alreadyBooked {
+  background: #fff8ec;
+  border: 1px solid #f0d5a8;
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 4px;
+}
+
+.alreadyBooked strong {
+  color: #8a5a12;
+}
+
+.alreadyBooked > strong {
+  display: block;
+  font-size: 0.98rem;
+  margin-bottom: 5px;
+}
+
+.alreadyBooked p {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #7a5a2e;
+}
+
+.alreadyBookedWa {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #25d366;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 11px 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  /* Same 44px floor as the rest of the form's tap targets. */
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.alreadyBookedWa:hover {
+  filter: brightness(1.05);
+  color: #fff;
+}
+
+/* A submit that can't fire should look like it. */
+.submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

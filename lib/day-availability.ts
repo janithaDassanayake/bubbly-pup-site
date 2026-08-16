@@ -8,12 +8,8 @@
 import { prisma } from "./db";
 import { dateOnly, toDateISO, addDaysISO, salonNow } from "./time";
 import { getSettings, toBusinessRules, RELEASED_STATUSES } from "./settings";
-import {
-  buildDayTimeline,
-  generateSlotGrid,
-  isWorkingDay,
-  type Interval,
-} from "./booking-engine";
+import { isWorkingDay, type Interval } from "./booking-engine";
+import { slotGrid } from "./booking-slots";
 
 export type DayStatus = "past" | "closed" | "full" | "open";
 
@@ -101,37 +97,23 @@ export async function rangeDayAvailability(
     }
 
     const dayNowMin = dateISO === todayISO ? nowMin : undefined;
-    // With a package chosen, "free" means "this service still fits" — a 30-min
-    // hole is no use to a 2-hour groom, so counting bare steps would show days
-    // as open that the slot grid then reveals as fully booked.
-    let free: number;
+    // One grid for every service. A booking takes one of its period's two
+    // places whatever its length, so the day looks the same to a 30-minute bath
+    // and a 2-hour groom — which is why the package no longer changes the
+    // count, and why the two branches this used to have collapsed into one.
+    const grid = slotGrid({
+      dateISO,
+      rules,
+      existing,
+      nowMin: dayNowMin,
+      todayISO,
+    });
+    // Bookable start times left.
+    const free = grid.filter((s) => !s.taken).length;
     // Nothing left BECAUSE the salon is booked out, or only because today's
     // remaining hours have run out? Labelling an empty evening "Full" tells the
     // customer the salon is busy when it simply closed for the day.
-    let bookedOut: boolean;
-    if (pkg) {
-      const grid = generateSlotGrid({
-        dateISO,
-        durationMin: pkg.durationMin,
-        gapMin: pkg.startGapMin,
-        rules,
-        existing,
-        nowMin: dayNowMin,
-        todayISO,
-      });
-      free = grid.filter((s) => !s.taken).length;
-      bookedOut = grid.some((s) => s.reason === "booked");
-    } else {
-      const cells = buildDayTimeline({
-        dateISO,
-        rules,
-        existing,
-        nowMin: dayNowMin,
-        todayISO,
-      }).cells;
-      free = cells.filter((c) => !c.full && !c.past).length;
-      bookedOut = cells.some((c) => c.full);
-    }
+    const bookedOut = grid.some((s) => s.reason === "booked");
 
     if (free > 0) return { dateISO, status: "open", free };
     return { dateISO, status: bookedOut ? "full" : "past", free: 0 };

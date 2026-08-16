@@ -9,7 +9,7 @@ import { updateAppointment } from "../../../../actions";
 import { formatLKR } from "@/lib/format";
 
 type Pkg = { key: string; name: string; durationMin: number; price: number; standalone: boolean };
-type AddOn = { key: string; name: string; price: number; group: string };
+type AddOn = { key: string; name: string; price: number; group: string; category: string };
 type Slot = { value: string; label: string; taken?: boolean; reason?: "booked" | "passed" };
 
 type Appt = {
@@ -23,17 +23,23 @@ type Appt = {
   startLabel: string;
   notes: string;
   priceEstimate: number;
+  /** manual adjustment already on the booking, or null when it's priced by the rules */
+  priceOverride: number | null;
 };
 
 export default function EditAppointmentForm({
   appointment,
   packages,
   addOns,
+  includedByPackage,
   todayISO,
 }: {
   appointment: Appt;
   packages: Pkg[];
   addOns: AddOn[];
+  // package key → add-on keys that package already includes. Marked, never
+  // removed: staff can still add a second bath, just not by accident.
+  includedByPackage: Record<string, string[]>;
   todayISO: string;
 }) {
   const router = useRouter();
@@ -48,6 +54,13 @@ export default function EditAppointmentForm({
   const [notes, setNotes] = useState(appointment.notes);
   const [queueUpdate, setQueueUpdate] = useState(true);
   const [error, setError] = useState("");
+  // The final price the customer pays. It follows the calculated total until
+  // the admin types their own figure — after that it's theirs to control, and
+  // `manual` is what stops a package change from wiping out an agreed discount.
+  const [manual, setManual] = useState(appointment.priceOverride != null);
+  const [finalPriceInput, setFinalPriceInput] = useState(
+    String(appointment.priceOverride ?? appointment.priceEstimate)
+  );
 
   const pkg = packages.find((p) => p.key === packageKey);
   const chosenAddOns = addOns.filter((a) => picked.includes(a.key));
@@ -55,7 +68,16 @@ export default function EditAppointmentForm({
   // ARE the price, so the row's own price is not added on top.
   const total =
     (pkg?.standalone ? 0 : pkg?.price ?? 0) + chosenAddOns.reduce((s, a) => s + a.price, 0);
-  const priceChanged = total !== appointment.priceEstimate;
+
+  // Blank means "no adjustment" — charge the calculated total.
+  const typed = finalPriceInput.trim();
+  const entered = typed === "" ? null : Math.round(Number(typed));
+  const enteredValid = entered === null || (Number.isFinite(entered) && entered >= 0);
+  const finalTotal = entered !== null && enteredValid ? entered : total;
+  const adjustedBy = finalTotal - total;
+  // What the booking is worth today, so "nothing changed" stays greyed out.
+  const wasTotal = appointment.priceOverride ?? appointment.priceEstimate;
+  const priceChanged = finalTotal !== wasTotal;
   const movedOrRescoped =
     packageKey !== appointment.packageKey ||
     date !== appointment.dateISO ||
@@ -89,6 +111,13 @@ export default function EditAppointmentForm({
     };
   }, [packageKey, date, appointment.id]);
 
+  // Re-scoping the visit re-prices it, unless the admin has already set the
+  // price by hand — then their number stands and the calculated total below it
+  // just moves, showing them what the change is worth.
+  useEffect(() => {
+    if (!manual) setFinalPriceInput(String(total));
+  }, [total, manual]);
+
   const toggleAddOn = (key: string) =>
     setPicked((p) => (p.includes(key) ? p.filter((k) => k !== key) : [...p, key]));
 
@@ -99,6 +128,10 @@ export default function EditAppointmentForm({
       setError("Pick a time slot.");
       return;
     }
+    if (!enteredValid) {
+      setError("Enter the final price as a whole number of rupees, or leave it blank.");
+      return;
+    }
     start(async () => {
       const r = await updateAppointment({
         id: appointment.id,
@@ -107,6 +140,7 @@ export default function EditAppointmentForm({
         date,
         start: slot,
         notes,
+        finalPrice: entered,
         queueUpdate,
       }).catch(() => ({ ok: false, error: "Something went wrong. Please try again." }));
 
@@ -155,20 +189,31 @@ export default function EditAppointmentForm({
           <div className="adm-field" key={group}>
             <label>{group}</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {items.map((a) => (
-                <label
-                  key={a.key}
-                  className={`adm-chip ${picked.includes(a.key) ? "adm-chip-on" : ""}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={picked.includes(a.key)}
-                    onChange={() => toggleAddOn(a.key)}
-                    style={{ marginRight: 6 }}
-                  />
-                  {a.name} · {formatLKR(a.price)}
-                </label>
-              ))}
+              {items.map((a) => {
+                const included = (includedByPackage[packageKey] ?? []).includes(a.key);
+                return (
+                  <label
+                    key={a.key}
+                    className={`adm-chip ${picked.includes(a.key) ? "adm-chip-on" : ""} ${
+                      included ? "adm-chip-included" : ""
+                    }`}
+                    title={
+                      included
+                        ? "Already included in the chosen package — adding it charges for it a second time"
+                        : undefined
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={picked.includes(a.key)}
+                      onChange={() => toggleAddOn(a.key)}
+                      style={{ marginRight: 6 }}
+                    />
+                    {a.name} · {formatLKR(a.price)}
+                    {included && <span className="adm-chip-tag">in package</span>}
+                  </label>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -221,6 +266,54 @@ export default function EditAppointmentForm({
           <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
         </div>
 
+        {/* Manual price adjustment. The salon discounts a visit at the desk
+            ("Rs. 4,000 package, take Rs. 2,000") and charges for extra work or
+            extra time — neither is a different package, so neither belongs in
+            the package/services picker. The calculated total stays on screen
+            so it's always clear what's being adjusted from. */}
+        <div className="adm-field">
+          <label htmlFor="final-price">Final price (LKR)</label>
+          <input
+            id="final-price"
+            type="number"
+            min={0}
+            step={1}
+            inputMode="numeric"
+            value={finalPriceInput}
+            onChange={(e) => {
+              setManual(true);
+              setFinalPriceInput(e.target.value);
+            }}
+          />
+          <p className="adm-note">
+            Calculated from the package and services: <strong>{formatLKR(total)}</strong>. Enter a
+            different amount to give a discount or to charge for extra work or time — the amount
+            here is the appointment total and what&apos;s collected on the payment screen.
+          </p>
+          {!enteredValid && (
+            <p className="adm-error" style={{ margin: "6px 0 0" }}>
+              Enter a whole number of rupees (0 or more).
+            </p>
+          )}
+          {enteredValid && adjustedBy !== 0 && (
+            <p className="adm-note" style={{ margin: "6px 0 0" }}>
+              {adjustedBy < 0
+                ? `Discount of ${formatLKR(-adjustedBy)} off the calculated total.`
+                : `${formatLKR(adjustedBy)} added to the calculated total.`}{" "}
+              <button
+                type="button"
+                className="adm-btn adm-btn-sm"
+                onClick={() => {
+                  setManual(false);
+                  setFinalPriceInput(String(total));
+                }}
+              >
+                Reset to {formatLKR(total)}
+              </button>
+            </p>
+          )}
+        </div>
+
         <div className="adm-field">
           <label className="adm-chip">
             <input
@@ -250,10 +343,11 @@ export default function EditAppointmentForm({
           }}
         >
           <div>
-            <strong>New total: {formatLKR(total)}</strong>
+            <strong>Final total: {formatLKR(finalTotal)}</strong>
             {priceChanged && (
               <p className="adm-note" style={{ margin: 0 }}>
-                was {formatLKR(appointment.priceEstimate)} — the price estimate will be updated
+                was {formatLKR(wasTotal)} — this is what the customer pays and what the payment
+                screen will ask for
               </p>
             )}
           </div>
@@ -269,7 +363,11 @@ export default function EditAppointmentForm({
             <button
               type="submit"
               className="adm-btn adm-btn-primary"
-              disabled={pending || (!movedOrRescoped && !priceChanged && notes === appointment.notes)}
+              disabled={
+                pending ||
+                !enteredValid ||
+                (!movedOrRescoped && !priceChanged && notes === appointment.notes)
+              }
             >
               {pending ? "Saving…" : "Save changes"}
             </button>

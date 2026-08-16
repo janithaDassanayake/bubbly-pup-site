@@ -2,7 +2,7 @@ import Link from "next/link";
 import { dashboardStats } from "@/lib/admin-data";
 import { formatDateLabel, dateOnly } from "@/lib/time";
 import { to12h } from "@/lib/booking-engine";
-import { formatLKR } from "@/lib/format";
+import { formatLKR, customerLabel } from "@/lib/format";
 import StatusBadge from "./StatusBadge";
 
 export const dynamic = "force-dynamic";
@@ -74,7 +74,7 @@ type Row = {
   date: Date;
   startMin: number;
   status: import("@prisma/client").AppointmentStatus;
-  customer: { name: string };
+  customer: { name: string | null; phone: string };
   pet: { name: string };
   package: { name: string };
 };
@@ -120,7 +120,7 @@ function ApptCard({
                     {showDate ? `${formatDateLabel(r.date)} · ` : ""}
                     {to12h(r.startMin)}
                   </td>
-                  <td data-label="Customer">{r.customer.name}</td>
+                  <td data-label="Customer">{customerLabel(r.customer)}</td>
                   <td data-label="Pet">{r.pet.name}</td>
                   <td data-label="Status">
                     <StatusBadge status={r.status} />

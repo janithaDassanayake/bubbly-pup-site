@@ -12,13 +12,14 @@
 import { AppointmentStatus } from "@prisma/client";
 import { appointmentConfirmedBody, thankYouBody, waLink } from "./whatsapp";
 import { formatDateLabel } from "./time";
+import { canWhatsApp } from "./phone";
 import { to12h } from "./booking-engine";
 
 export type ApptForWa = {
   code: string;
   date: Date;
   startMin: number;
-  customer: { name: string; phone: string };
+  customer: { name?: string | null; phone: string };
   pet: { name: string };
   package: { name: string };
 };
@@ -26,6 +27,10 @@ export type ApptForWa = {
 export type WaPreview = Partial<Record<AppointmentStatus, string>>;
 
 export function waPreviews(a: ApptForWa, businessName: string): WaPreview {
+  // A walk-in taken without a number has nothing to open. Returning no previews
+  // is what hides the WhatsApp buttons on the row — better than a button that
+  // opens the app onto a chat that cannot exist.
+  if (!canWhatsApp(a.customer.phone)) return {};
   return {
     CONFIRMED: waLink(
       a.customer.phone,
@@ -41,7 +46,7 @@ export function waPreviews(a: ApptForWa, businessName: string): WaPreview {
     ),
     COMPLETED: waLink(
       a.customer.phone,
-      thankYouBody({ businessName, ownerName: a.customer.name, petName: a.pet.name })
+      thankYouBody({ businessName, petName: a.pet.name })
     ),
   };
 }

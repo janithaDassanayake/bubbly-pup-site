@@ -1,7 +1,7 @@
 // Bridges the marketing booking form (package names + add-on ids) to the backend
 // catalog keys used by /api/availability and /api/bookings. The 4 grooming
 // packages share ids with PRICE_PACKAGES; standalone options resolve by intent.
-import { ADD_ONS, SINGLE_SERVICE, packageForOption } from "./data";
+import { ADD_ONS, SINGLE_SERVICE, SPA_OPTION, packageForOption } from "./data";
 
 // Marketing add-on category → the standalone catalog key that carries its duration.
 const CATEGORY_TO_KEY: Record<string, string> = {
@@ -9,6 +9,14 @@ const CATEGORY_TO_KEY: Record<string, string> = {
   trim: "trim-only",
   haircut: "trim-only",
   spa: "spa-only",
+  // The care services booked on their own share one 30-minute standalone slot.
+  // Without an entry here they'd fall through to "spa-only" and be recorded as
+  // a spa treatment in the salon's appointment list.
+  bath: "care-only",
+  nails: "care-only",
+  ears: "care-only",
+  teeth: "care-only",
+  perfume: "care-only",
 };
 
 export function packageKeyForOption(optionName: string, addOnIds: string[]): string | null {
@@ -18,7 +26,7 @@ export function packageKeyForOption(optionName: string, addOnIds: string[]): str
   const match = packageForOption(optionName);
   if (match) return match.tier?.key ?? match.pkg.id;
 
-  if (optionName === "Spa Treatments") return "spa-only";
+  if (optionName === SPA_OPTION) return "spa-only";
 
   // Single service (no package): pick the standalone key from the chosen add-ons.
   if (optionName === SINGLE_SERVICE) {

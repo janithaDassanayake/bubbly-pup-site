@@ -1,0 +1,155 @@
+===========================================================
+ WHAT TO ADD  -  bubblypup.lk
+ Checked: 27 July 2026
+===========================================================
+
+Log in to your .lk domain registrar (nic.lk or the reseller you
+bought the domain from) and open:
+    DNS Management  /  DNS Records  /  Zone Editor
+
+
+-----------------------------------------------------------
+ 1. RECORDS THAT ALREADY EXIST  ->  DO NOT TOUCH
+-----------------------------------------------------------
+
+    A     @  (bubblypup.lk)     216.198.79.1
+          ^ this points the site at Vercel. Leave it alone.
+
+    TXT   @  (bubblypup.lk)     v=spf1 mx ~all
+          ^ this is for EMAIL. Deleting it can break mail.
+
+If you delete either of these the website or email will stop
+working.
+
+
+-----------------------------------------------------------
+ 2. ADD THIS  ->  makes www.bubblypup.lk work   [REQUIRED]
+-----------------------------------------------------------
+
+Right now www.bubblypup.lk does NOT exist. Anyone who types
+"www." gets a dead page. Add:
+
+    Type   : CNAME
+    Name   : www
+    Value  : cname.vercel-dns.com
+    TTL    : leave default (or 3600)
+
+If your panel refuses CNAME, use this instead:
+
+    Type   : A
+    Name   : www
+    Value  : 76.76.21.21
+
+IMPORTANT - the mistake almost everyone makes:
+In the "Name" field type ONLY:      www
+NOT:                                www.bubblypup.lk
+Most panels add the domain for you. Typing the full name
+creates a broken "www.bubblypup.lk.bubblypup.lk".
+(If the records already in your panel DO show the full name,
+then match that style instead.)
+
+Nothing to do on Vercel afterwards - the domain is already
+added there and waiting. Vercel checks automatically and
+issues the HTTPS certificate on its own.
+
+Time to work: usually 5-30 minutes. .lk can take a few hours.
+
+
+-----------------------------------------------------------
+ 3. ADD THIS  ->  Google Search Console        [RECOMMENDED]
+-----------------------------------------------------------
+
+There is NO google verification record on the domain yet, so
+Search Console is not set up. Without it you cannot see what
+people search, or whether Google has indexed the site.
+
+STEP 1 - get the code from Google:
+    Go to     https://search.google.com/search-console
+    Click     Add property
+    Choose    Domain   (the LEFT box)
+    Enter     bubblypup.lk
+    Google shows a TXT value that looks like:
+              google-site-verification=AbC123xyz...
+
+STEP 2 - add it in the same DNS panel:
+
+    Type   : TXT
+    Name   : @        (or blank, or bubblypup.lk - match your panel)
+    Value  : google-site-verification=AbC123xyz...
+             ^ paste Google's exact string, not this example
+
+STEP 3 - wait 15-30 minutes, then click Verify in Google.
+
+NOTE: you will now have TWO TXT records on @ (the SPF one and
+the Google one). That is normal and correct. Do NOT replace
+the SPF record - add a second TXT record.
+
+AFTER VERIFYING:
+    - Left menu -> Sitemaps -> type  sitemap.xml  -> Submit
+    - Left menu -> URL Inspection -> paste https://bubblypup.lk
+      -> Request Indexing
+
+
+-----------------------------------------------------------
+ 4. OPTIONAL CLEANUP
+-----------------------------------------------------------
+
+There is a stray TXT record on the domain with the value:
+
+    "Janitha"
+
+It does nothing. Harmless, but you can delete it to keep the
+zone tidy. Do not confuse it with the SPF record above.
+
+
+-----------------------------------------------------------
+ 5. NOT DNS - BUT STILL TO DO
+-----------------------------------------------------------
+
+[ ] ROTATE THE DATABASE PASSWORD  (security - do this)
+    The Neon password was shared in a chat and should be
+    treated as compromised.
+
+    1. https://console.neon.tech -> your project
+    2. Roles -> neondb_owner -> Reset password
+    3. Copy the new connection string
+    4. Update it on Vercel:
+
+       npx vercel env rm DATABASE_URL production --scope janithas-projects-dbf5b4aa
+       npx vercel env add DATABASE_URL production --scope janithas-projects-dbf5b4aa
+       (paste the new string when asked)
+
+    5. Redeploy:
+       npx vercel --prod --yes --scope janithas-projects-dbf5b4aa
+
+[ ] GOOGLE BUSINESS PROFILE
+    https://business.google.com - claim "Bubbly Pup Pet
+    Grooming Salon" (it already has 5.0 stars / 30 reviews).
+    Add: website bubblypup.lk, phone +94 76 668 4586,
+    address, opening hours, photos.
+    For "dog grooming near me" this matters MORE than the
+    website itself.
+
+[ ] CHECK ON A REAL PHONE
+    - the footer / map looks right
+    - a test booking opens WhatsApp to +94 76 668 4586
+      and the message actually arrives
+
+
+-----------------------------------------------------------
+ 6. HOW TO CHECK IT WORKED
+-----------------------------------------------------------
+
+Open in a browser:
+
+    https://www.bubblypup.lk        -> should load the site
+    https://bubblypup.lk            -> already works
+
+Or send me a message and I will verify DNS, the HTTPS
+certificate, and that the admin login works on www too.
+
+
+===========================================================
+ SUMMARY - the one thing that is actually required:
+ add   CNAME   www   ->   cname.vercel-dns.com
+===========================================================

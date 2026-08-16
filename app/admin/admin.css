@@ -373,7 +373,13 @@ table.adm-table {
   cursor: pointer;
   color: #6b4a5c;
 }
-.adm-chip-on {
+/* Two classes on purpose: a SECOND, later `.adm-chip` block further down this
+   file (the filter chips) re-declares background/colour/border at the same
+   specificity, so a one-class `.adm-chip-on` lost on source order and a picked
+   chip looked exactly like an unpicked one — the Yes/No and add-on chips read
+   as "the button does nothing". Specificity beats order; don't drop back to a
+   single class. */
+.adm-chip.adm-chip-on {
   background: #ffe6f4;
   border-color: #db3a8d;
   color: #a12a6b;
@@ -1469,4 +1475,660 @@ table.adm-table {
 .adm-choice.on {
   border-color: var(--adm-pink);
   background: var(--adm-pink-50);
+}
+
+/* An add-on the chosen package ALREADY includes. Marked, not disabled — the
+   salon can still add a second bath for a filthy dog, it just shouldn't do it
+   by accident and charge twice. Appended at the end of the file on purpose: a
+   later `.adm-chip` block above re-declares border/background at the same
+   specificity, so an earlier rule would lose on source order. */
+.adm-chip.adm-chip-included {
+  border-style: dashed;
+  border-color: #e0a94a;
+}
+
+.adm-chip-tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fff3dd;
+  color: #8a5a12;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---- booking source (Online Reservation vs Walk-In) ----
+   Appended at the end for the same reason as .adm-chip-included above: rules
+   further down the file win on source order at equal specificity.
+
+   Colour carries the meaning at a glance — blue for a slot the customer
+   reserved on the website, amber for one the salon took itself — but the label
+   is always printed too, so the column is still readable in greyscale and to
+   anyone who doesn't separate those two hues. */
+.adm-src {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.adm-src-online {
+  background: #e6f4ff;
+  color: #0b6bcb;
+  border-color: #c4e2fb;
+}
+.adm-src-walkin {
+  background: #fff4e5;
+  color: #b26a00;
+  border-color: #f6ddb8;
+}
+
+/* A button that reads as a link — used inside form hints ("reset" beside an
+   adjusted price), where a real button would outweigh the text it sits in. */
+.adm-linkbtn {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--adm-pink-600);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---- reports ----
+   A revenue table is read down one column ("which day was best?"), so the
+   money is right-aligned and tabular-figured: proportional digits make
+   Rs. 11,000 look shorter than Rs. 8,500 and the eye picks the wrong row. */
+.adm-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.adm-rep-bar {
+  display: block;
+  height: 6px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--adm-pink-600), #f28fc4);
+  min-width: 2px;
+}
+/* The day-wise table stacks into cards on phones like every other admin table
+   (.adm-cards), and a right-aligned number inside a card label/value row reads
+   as detached — so the alignment is a desktop-only affordance. */
+@media (max-width: 767px) {
+  .adm-num {
+    text-align: left;
+  }
+}
+
+/* ---- walk-in intake (/admin/appointments/walk-in) ----
+   Its own layer over `.adm-form`, because this one form is filled standing at a
+   counter with a wet dog under one arm: the steps are numbered so a half-filled
+   form shows where you stopped, the tap targets are finger-sized rather than
+   mouse-sized, and the price is a headline instead of another input in a row.
+   Appended at the end of the file for the usual reason — later blocks win on
+   source order at equal specificity. */
+.adm-wi-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--adm-line);
+  background: linear-gradient(135deg, var(--adm-pink-50), #fff 60%);
+}
+.adm-wi-hero .glyph {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  font-size: 1.7rem;
+  background: #fff;
+  border: 1px solid var(--adm-line);
+  box-shadow: var(--adm-shadow);
+}
+.adm-wi-hero h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+.adm-wi-hero p {
+  margin: 3px 0 0;
+  font-size: 0.85rem;
+  color: var(--adm-muted);
+}
+
+/* One step. Label rail on the left at desk width, stacked on a phone. */
+.adm-wi-step {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 18px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--adm-line);
+}
+.adm-wi-step:last-of-type {
+  border-bottom: 0;
+}
+.adm-wi-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.adm-wi-num {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #ffe6f4;
+  color: #a12a6b;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.adm-wi-head h3 {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.adm-wi-head p {
+  margin: 3px 0 0;
+  font-size: 0.78rem;
+  color: var(--adm-muted);
+  line-height: 1.4;
+}
+.adm-wi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.adm-wi-body .adm-field {
+  margin-bottom: 0;
+}
+
+/* Finger-sized chips. The Dog/Cat pair and the extras are the controls staff
+   hit most, and a 6px-tall pill is a mouse target, not a thumb one. */
+.adm-chip-lg {
+  padding: 11px 18px;
+  font-size: 0.88rem;
+  border-radius: 12px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* The price is the answer the customer is waiting for, so it is set like one. */
+.adm-wi-price input {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  padding: 12px 14px;
+  font-variant-numeric: tabular-nums;
+}
+.adm-wi-price-wrap {
+  position: relative;
+}
+.adm-wi-price-wrap .cur {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--adm-muted);
+  pointer-events: none;
+}
+.adm-wi-price-wrap input {
+  padding-left: 52px;
+  width: 100%;
+}
+
+/* Live summary — what this visit will actually be recorded as. Reads back the
+   decision rather than the inputs, so a mistyped price or a forgotten service
+   is visible before the button is pressed, not after. */
+.adm-wi-sum {
+  border: 1px solid #f6ddb8;
+  background: #fffaf1;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.adm-wi-sum .amt {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--adm-ink);
+}
+.adm-wi-sum .line {
+  font-size: 0.82rem;
+  color: #8a5a12;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.adm-wi-sum.ready {
+  border-color: #bfe6cd;
+  background: #f4fbf6;
+}
+.adm-wi-sum.ready .line {
+  color: #1c7c3f;
+}
+
+/* The action bar. Sticky at the foot of the form so the button is reachable
+   without scrolling back up a long form on a phone. */
+.adm-wi-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--adm-line);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(6px);
+}
+.adm-wi-foot .adm-btn-primary {
+  min-height: 46px;
+  padding: 0 22px;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 767px) {
+  .adm-wi-step {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+  .adm-wi-hero {
+    padding: 16px;
+  }
+  .adm-wi-foot {
+    padding: 12px 16px;
+  }
+  /* Full-width submit: the primary action on a phone shouldn't be a small
+     target floating beside a Cancel link. */
+  .adm-wi-foot .adm-btn-primary {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* ---- reports: charts ------------------------------------------------------
+   Two series, one meaning, everywhere on the page: pink is ONLINE, blue is
+   WALK-IN. The pair was validated for colour-vision deficiency against this
+   white card surface (worst case ΔE 12.0 protan / 32.5 tritan, target ≥ 8), and
+   every chart names both series in a legend as well — colour is never the only
+   thing carrying identity.
+
+   The plot is a stack of absolutely-positioned layers inside .rep-plot:
+     .rep-grid   gridlines, at the back
+     .rep-area   the SVG bands (area shape only)
+     .rep-cols   one hit column per point, over everything — bars live here too
+   Hovering a column tints it and reveals .rep-readout, which is pinned to the
+   TOP-RIGHT OF THE PLOT rather than to the column: a readout following a 12px
+   column would be clipped by the card at both ends of the chart. */
+:root {
+  --rep-online: #db3a8d;
+  --rep-walkin: #2a78d6;
+  --rep-track: #f1edf3;
+}
+
+.rep-card {
+  margin-bottom: 16px;
+}
+
+.rep-legend {
+  display: flex;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rep-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  /* Text stays ink-coloured; the swatch beside it carries the series. */
+  color: var(--adm-muted);
+}
+.rep-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+.rep-key-online {
+  background: var(--rep-online);
+}
+.rep-key-walkin {
+  background: var(--rep-walkin);
+}
+
+.rep-chart {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+}
+
+/* The five tick labels sit at the five gridlines. The negative margins pull the
+   first and last half a line-height outward so their CENTRES land on the top
+   and bottom rules rather than their edges. */
+.rep-axis {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin: -0.4em 0;
+  font-size: 0.7rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--adm-muted);
+}
+
+.rep-plot {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  height: 230px;
+}
+
+.rep-grid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.rep-grid i {
+  display: block;
+  height: 0;
+  border-top: 1px solid var(--adm-line);
+}
+/* The baseline is the one rule the eye measures from, so it is the one rule
+   that isn't recessive. */
+.rep-grid i:last-child {
+  border-top-color: #ddd9e2;
+}
+
+.rep-area {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.rep-fill-online {
+  fill: var(--rep-online);
+  fill-opacity: 0.85;
+}
+.rep-fill-walkin {
+  fill: var(--rep-walkin);
+  fill-opacity: 0.85;
+}
+/* The 2px surface gap between the stacked fills, and the trend line on top.
+   `non-scaling-stroke` is load-bearing: the SVG is stretched to the plot with
+   preserveAspectRatio="none", which without it would smear a 2px line into a
+   fat one horizontally and a hairline vertically. */
+.rep-sep,
+.rep-line {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.rep-sep {
+  stroke: var(--adm-card);
+  stroke-width: 2;
+}
+/* Neutral, NOT the walk-in blue: this is the outline of the whole stack, and
+   on a period with no walk-ins it would otherwise draw a blue line across a
+   chart whose walk-in total is zero. */
+.rep-line {
+  stroke: rgba(42, 34, 48, 0.3);
+  stroke-width: 2;
+}
+
+.rep-cols {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+}
+.rep-col {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 4px 4px 0 0;
+}
+.rep-col:hover {
+  background: rgba(219, 58, 141, 0.08);
+}
+
+.rep-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* The 2px surface gap between stacked segments. Only ever seen when both
+     segments exist — a zero-value segment isn't rendered at all. */
+  gap: 2px;
+  width: min(64%, 26px);
+  height: 100%;
+}
+.rep-seg {
+  display: block;
+  flex: none;
+  width: 100%;
+  min-height: 3px;
+}
+.rep-seg-online {
+  background: var(--rep-online);
+}
+.rep-seg-walkin {
+  background: var(--rep-walkin);
+}
+/* Rounded data-end on the top of the stack only; the bottom is anchored to the
+   baseline and a rounded foot would lift it off. */
+.rep-seg-top {
+  border-radius: 4px 4px 0 0;
+}
+
+.rep-readout {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 148px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--adm-line);
+  background: var(--adm-card);
+  box-shadow: var(--adm-shadow);
+  font-size: 0.76rem;
+  color: var(--adm-muted);
+  pointer-events: none;
+  text-align: left;
+}
+.rep-col:hover .rep-readout {
+  display: flex;
+}
+.rep-readout strong {
+  color: var(--adm-ink);
+  font-size: 0.8rem;
+}
+.rep-readout span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rep-readout b {
+  margin-left: auto;
+  color: var(--adm-ink);
+  font-variant-numeric: tabular-nums;
+}
+.rep-readout-total {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid var(--adm-line);
+}
+.rep-readout .rep-key {
+  border-radius: 2px;
+  width: 8px;
+  height: 8px;
+}
+
+.rep-xaxis {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  margin-top: 7px;
+}
+.rep-xaxis span {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: var(--adm-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ---- reports: donuts ---- */
+.rep-split {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.rep-donut {
+  position: relative;
+  width: 168px;
+  flex: none;
+}
+.rep-donut svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.rep-track {
+  stroke: var(--rep-track);
+}
+.rep-arc-online {
+  stroke: var(--rep-online);
+}
+.rep-arc-walkin {
+  stroke: var(--rep-walkin);
+}
+.rep-donut-mid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  pointer-events: none;
+}
+.rep-donut-mid .v {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.rep-donut-mid .k {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--adm-muted);
+}
+
+.rep-keys {
+  flex: 1 1 180px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+.rep-keys > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--adm-line);
+}
+.rep-keys > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.rep-keys dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.rep-keys dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+.rep-keys dd strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 767px) {
+  .rep-plot {
+    height: 190px;
+  }
+  .rep-readout {
+    min-width: 132px;
+    font-size: 0.72rem;
+  }
+  .rep-split {
+    justify-content: center;
+  }
+  .rep-donut {
+    width: 148px;
+  }
+}
+
+/* Reports has eight tiles, and several of them hold money. At the 160px the
+   dashboard tiles use, "Rs. 16,000" at 1.9rem breaks after "Rs." — a figure
+   split across two lines is the one thing a stat tile must never do. Wider
+   columns also land the eight as two clean rows of four rather than six-then-two. */
+.adm-stats-wide {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.adm-stats-wide .adm-tile .v {
+  white-space: nowrap;
+}
+
+/* A date field and its label are one control; they wrap together or not at all. */
+.adm-daterange {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

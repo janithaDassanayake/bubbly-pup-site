@@ -13,7 +13,7 @@ import {
   type AddOn,
 } from "@/lib/data";
 import { packageKeyForOption } from "@/lib/booking-map";
-import { phoneProblem } from "@/lib/phone";
+import { isValidPhone, phoneProblem } from "@/lib/phone";
 import { reservationRequestBody } from "@/lib/booking-message";
 import { DOG_BREEDS } from "@/lib/breeds";
 import BookingCalendar from "./BookingCalendar";
@@ -24,17 +24,26 @@ import styles from "./Booking.module.css";
 // disappearing from the list.
 type Slot = { value: string; label: string; taken?: boolean; reason?: "booked" | "passed" };
 
+// The breed list we carry is dog breeds, and a cat groom isn't priced or planned
+// by breed — so Cat hides the field entirely and drops it from validation. "" is
+// the unanswered state: neither the breed field nor the pet wording below it can
+// be right until the customer has told us which animal is coming.
+type PetType = "" | "Dog" | "Cat";
+
+const PET_TYPES = [
+  { value: "Dog", label: "Dog", emoji: "🐶" },
+  { value: "Cat", label: "Cat", emoji: "🐱" },
+] as const;
 
 type Form = {
   packageId: string;
   addOns: string[]; // selected add-on ids
   date: string;
   slot: string;
-  ownerName: string;
   ownerPhone: string;
-  dogName: string;
-  dogAge: string;
-  breed: string;
+  petType: PetType;
+  petName: string;
+  breed: string; // dogs only — always "" while Cat is selected
   aggressive: "" | "Yes" | "No";
   notes: string;
 };
@@ -44,10 +53,9 @@ const EMPTY: Form = {
   addOns: [],
   date: "",
   slot: "",
-  ownerName: "",
   ownerPhone: "",
-  dogName: "",
-  dogAge: "",
+  petType: "",
+  petName: "",
   breed: "",
   aggressive: "",
   notes: "",
@@ -82,13 +90,21 @@ export default function Booking({
   const [apiSlots, setApiSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
 
+  // One reservation per number per day. Held as state rather than checked at
+  // submit time because submit is too late: this form opens WhatsApp inside the
+  // click gesture, so by the time an answer came back the customer would already
+  // have told us they booked. Known before the tap, the button is simply off.
+  const [alreadyBooked, setAlreadyBooked] = useState<{ timeLabel: string; message: string } | null>(
+    null
+  );
+
   // Add-ons popup: the package awaiting confirmation + its ticked add-ons.
   const [modalPkg, setModalPkg] = useState<string | null>(null);
   const [modalAddOns, setModalAddOns] = useState<string[]>([]);
 
   // Answering "Yes" to the aggression question opens a notice the customer must
   // explicitly accept. "Yes" is only recorded once they do, so the booking can
-  // never carry an aggressive dog without recorded consent.
+  // never carry an aggressive pet without recorded consent.
   const [showAggressive, setShowAggressive] = useState(false);
   const [aggressiveAck, setAggressiveAck] = useState(false);
   const [ackChecked, setAckChecked] = useState(false);
@@ -99,8 +115,22 @@ export default function Booking({
     [form.packageId, form.addOns]
   );
 
-  const update = (key: keyof Form, value: string) => {
+  // A validation message describes the form as it was when Submit was pressed,
+  // so it must not outlive the fix. Without this the customer picks the very
+  // date they were just asked for and "Please fill in date to continue." is
+  // still sitting there — which reads as "I did that and it still won't take it",
+  // and the usual next move is to press Submit again to find out why.
+  //
+  // Cleared on ANY field change rather than only the field named in the message:
+  // the message names the FIRST thing missing, so filling in something else is
+  // just as likely to have made it stale.
+  const clearNotices = () => {
     if (success) setSuccess("");
+    if (error) setError("");
+  };
+
+  const update = (key: keyof Form, value: string) => {
+    clearNotices();
     setForm((f) => ({ ...f, [key]: value }));
   };
 
@@ -158,8 +188,43 @@ export default function Booking({
     };
   }, [packageKey, form.date]);
 
+  // Ask as soon as the day and the number are both known -- and re-ask whenever
+  // either changes, because moving the date is exactly how a customer blocked on
+  // one day becomes free to book another. Debounced: the number is typed a digit
+  // at a time, and every keystroke is not a question worth asking.
+  useEffect(() => {
+    const phone = form.ownerPhone.trim();
+    if (!form.date || !isValidPhone(phone)) {
+      setAlreadyBooked(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      const q = `/api/bookings/existing?date=${form.date}&phone=${encodeURIComponent(phone)}`;
+      fetch(q)
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then((d: { booked: boolean; timeLabel?: string; message?: string }) => {
+          if (cancelled) return;
+          setAlreadyBooked(
+            d.booked && d.timeLabel && d.message
+              ? { timeLabel: d.timeLabel, message: d.message }
+              : null
+          );
+        })
+        // A check we could not run must not block a booking -- the POST still
+        // enforces the rule, so failing open costs a confusing message at worst,
+        // while failing closed would refuse a customer who has done nothing.
+        .catch(() => !cancelled && setAlreadyBooked(null));
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [form.date, form.ownerPhone]);
+
   // Confirm the popup: apply package + chosen add-ons, then go to the form.
   const confirmModal = (addOns: string[]) => {
+    clearNotices();
     setForm((f) => ({ ...f, packageId: modalPkg ?? "", addOns }));
     setModalPkg(null);
     requestAnimationFrame(scrollToForm);
@@ -170,17 +235,19 @@ export default function Booking({
       a.includes(id) ? a.filter((x) => x !== id) : [...a, id]
     );
 
-  const toggleFormAddOn = (id: string) =>
+  const toggleFormAddOn = (id: string) => {
+    clearNotices();
     setForm((f) => ({
       ...f,
       addOns: f.addOns.includes(id)
         ? f.addOns.filter((x) => x !== id)
         : [...f.addOns, id],
     }));
+  };
 
   // Changing the package prunes add-ons that no longer apply (no overlap).
   const changePackage = (name: string) => {
-    if (success) setSuccess("");
+    clearNotices();
     const allowed = new Set(servicesFor(name).map((a) => a.id));
     setForm((f) => ({
       ...f,
@@ -188,6 +255,20 @@ export default function Booking({
       addOns: f.addOns.filter((id) => allowed.has(id)),
     }));
   };
+
+  // Switching away from Dog drops any breed already chosen. Keeping it would
+  // send a Labrador along with a cat booking — and the field is gone from the
+  // form by then, so nobody could spot it or correct it.
+  const changePetType = (type: Exclude<PetType, "">) => {
+    clearNotices();
+    setForm((f) => ({ ...f, petType: type, breed: type === "Dog" ? f.breed : "" }));
+  };
+
+  const isDog = form.petType === "Dog";
+  // Every label that would otherwise say "dog" follows the choice — "your dog's
+  // name" is the wrong question to ask someone booking a cat.
+  const petNoun = form.petType === "Cat" ? "cat" : form.petType === "Dog" ? "dog" : "pet";
+  const PetNoun = petNoun[0].toUpperCase() + petNoun.slice(1);
 
   const isSingle = form.packageId === SINGLE_SERVICE;
   // Single service → every à-la-carte service; a package → its filtered add-ons.
@@ -211,10 +292,9 @@ export default function Booking({
       addOns: services.filter((a) => form.addOns.includes(a.id)),
       dateISO: form.date,
       slotLabel,
-      ownerName: form.ownerName,
       ownerPhone: form.ownerPhone,
-      dogName: form.dogName,
-      dogAge: form.dogAge,
+      petType: form.petType,
+      petName: form.petName,
       breed: form.breed,
       aggressive: form.aggressive,
       notes: form.notes,
@@ -261,7 +341,7 @@ export default function Booking({
     setError("");
     setSuccess("");
 
-    // "Spa Treatments" and "Single service" have no package price of their own —
+    // "Spa & Treatments" and "Single service" have no package price of their own —
     // the services chosen ARE the booking, so one is required or there's nothing
     // to quote.
     if (isServiceOnlyOption(form.packageId) && form.addOns.length === 0) {
@@ -273,16 +353,25 @@ export default function Booking({
       ["packageId", "package"],
       ["date", "date"],
       ["slot", "time slot"],
-      ["ownerName", "your name"],
       ["ownerPhone", "your phone number"],
-      ["dogName", "your dog's name"],
-      ["dogAge", "your dog's age"],
-      ["breed", "your dog's breed"],
-      ["aggressive", "whether your dog is aggressive"],
+      ["petType", "whether you're bringing a dog or a cat"],
+      ["petName", `your ${petNoun}'s name`],
+      // Dogs only. A cat booking has no breed field on screen, so requiring one
+      // would block the customer on something they cannot fill in.
+      ...(isDog ? ([["breed", "your dog's breed"]] as [keyof Form, string][]) : []),
+      ["aggressive", `whether your ${petNoun} is aggressive`],
     ];
     const missing = required.find(([k]) => !String(form[k]).trim());
     if (missing) {
       setError(`Please fill in ${missing[1]} to continue.`);
+      return;
+    }
+
+    // Already holding a slot that day? Stop before the WhatsApp hand-off — once
+    // that opens, the customer has told us they booked and nothing said
+    // afterwards can take it back.
+    if (alreadyBooked) {
+      setError(alreadyBooked.message);
       return;
     }
 
@@ -339,12 +428,11 @@ export default function Booking({
           addOnKeys: form.addOns,
           date: form.date,
           start: form.slot,
-          owner: { name: form.ownerName.trim(), phone: form.ownerPhone.trim() },
+          owner: { phone: form.ownerPhone.trim() },
           pet: {
-            name: form.dogName.trim(),
-            breed: form.breed,
-            age: form.dogAge.trim(),
-            gender: "UNKNOWN",
+            name: form.petName.trim(),
+            species: isDog ? "DOG" : "CAT",
+            breed: form.breed || undefined, // cats are saved without one
             notes: petNotes,
           },
           notes: form.notes.trim() || undefined,
@@ -412,17 +500,19 @@ export default function Booking({
             📅 Make a Reservation
           </span>
           <h2 className={styles.title}>
-            Book your pup&apos;s pampering in seconds
+            Book your pet&apos;s pampering in seconds
           </h2>
           <p className={styles.sub}>
             Fill in the details and we&apos;ll whisk your reservation straight to
-            our WhatsApp. We&apos;ll confirm your slot in no time. 🐶💨
+            our WhatsApp. We&apos;ll confirm your slot in no time. 🐾💨
           </p>
 
           <ul className={styles.perks}>
             <li>✅ Instant booking via WhatsApp</li>
             <li>✅ Pay after service</li>
-            <li>✅ 6 free add-ons included</li>
+            {/* Was "6 free add-ons included" — see VALUE_PROPS in lib/data.ts
+                for why that claim doesn't survive a read of the price cards. */}
+            <li>✅ Bath, brushing, nails &amp; perfume included</li>
           </ul>
 
           <div className={styles.contactCard}>
@@ -431,7 +521,7 @@ export default function Booking({
               <small>Prefer to chat first?</small>
               <a
                 href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(
-                  "Hi Bubbly Pup Pet Grooming! I'd like to ask about grooming for my dog 🐾"
+                  "Hi Bubbly Pup Pet Grooming! I'd like to ask about grooming for my pet 🐾"
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -443,6 +533,35 @@ export default function Booking({
         </div>
 
         <form className={styles.card} onSubmit={handleSubmit}>
+          {/* First question in the form: it decides whether a breed is asked for
+              at all, and the wording of every pet field below. */}
+          <div className={styles.field}>
+            <label id="petTypeLabel">Pet Type *</label>
+            <div
+              className={styles.petTypes}
+              role="group"
+              aria-labelledby="petTypeLabel"
+            >
+              {PET_TYPES.map((p) => {
+                const on = form.petType === p.value;
+                return (
+                  <button
+                    type="button"
+                    key={p.value}
+                    className={`${styles.petCard} ${on ? styles.petCardOn : ""}`}
+                    onClick={() => changePetType(p.value)}
+                    aria-pressed={on}
+                  >
+                    <span className={styles.petEmoji} aria-hidden="true">
+                      {p.emoji}
+                    </span>
+                    <span>{p.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className={styles.field}>
             <label htmlFor="package">Package *</label>
             <select
@@ -457,6 +576,15 @@ export default function Booking({
                 </option>
               ))}
             </select>
+            {/* Without this, someone who only wants a nail trim picks the
+                cheapest package and pays for a groom they didn't ask for —
+                the "no package" option is the one that isn't self-evident. */}
+            {!isServiceOnlyOption(form.packageId) && (
+              <small className={styles.fieldNote}>
+                💡 Not taking a package? Choose <strong>{SINGLE_SERVICE}</strong>{" "}
+                — then pick just the service(s) you want.
+              </small>
+            )}
           </div>
 
           {/* Date sits directly above the slot grid, so "date → times" still
@@ -510,7 +638,7 @@ export default function Booking({
                             s.taken
                               ? s.reason === "passed"
                                 ? "This time has already passed"
-                                : "Already booked"
+                                : "This time is already booked — please pick another"
                               : undefined
                           }
                           onClick={() => update("slot", s.value)}
@@ -570,95 +698,79 @@ export default function Booking({
             </div>
           )}
 
-          {/* Owner's name and number belong together — one person, one row. */}
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label htmlFor="ownerName">Your Name *</label>
-              <input
-                id="ownerName"
-                type="text"
-                placeholder="e.g. Sahan"
-                value={form.ownerName}
-                onChange={(e) => update("ownerName", e.target.value)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="ownerPhone">Your WhatsApp Number *</label>
-              <input
-                id="ownerPhone"
-                type="tel"
-                inputMode="tel"
-                placeholder="e.g. 071 234 5678"
-                value={form.ownerPhone}
-                onChange={(e) => update("ownerPhone", e.target.value)}
-              />
-              <small style={{ color: "#9c2566", fontSize: ".75rem", fontWeight: 500 }}>
-                💬 The number you actually chat on — we&apos;ll send updates here.
-              </small>
-            </div>
+          {/* The WhatsApp number is the only contact detail asked for — it's the
+              one the salon replies on, and it identifies a repeat customer. */}
+          <div className={styles.field}>
+            <label htmlFor="ownerPhone">Your WhatsApp Number *</label>
+            <input
+              id="ownerPhone"
+              type="tel"
+              inputMode="tel"
+              placeholder="e.g. 071 234 5678"
+              value={form.ownerPhone}
+              onChange={(e) => update("ownerPhone", e.target.value)}
+            />
+            <small style={{ color: "#9c2566", fontSize: ".75rem", fontWeight: 500 }}>
+              💬 The number you actually chat on — we&apos;ll send updates here.
+            </small>
           </div>
 
-          <div className={styles.row}>
+          {/* Two columns only while the breed field is there to fill the second
+              one — alone, the name field would sit in a half-width orphan. */}
+          <div className={isDog ? styles.row : undefined}>
             <div className={styles.field}>
-              <label htmlFor="dogName">Dog&apos;s Name *</label>
+              <label htmlFor="petName">{PetNoun}&apos;s Name *</label>
               <input
-                id="dogName"
+                id="petName"
                 type="text"
                 placeholder="e.g. Coco"
-                value={form.dogName}
-                onChange={(e) => update("dogName", e.target.value)}
+                value={form.petName}
+                onChange={(e) => update("petName", e.target.value)}
               />
             </div>
-            <div className={styles.field}>
-              <label htmlFor="dogAge">Dog&apos;s Age *</label>
-              <input
-                id="dogAge"
-                type="text"
-                placeholder="e.g. 2 years"
-                value={form.dogAge}
-                onChange={(e) => update("dogAge", e.target.value)}
-              />
-            </div>
+            {/* Dogs only — see PetType. Hidden AND unvalidated for a cat. */}
+            {isDog && (
+              <div className={styles.field}>
+                <label htmlFor="breed">Dog&apos;s Breed *</label>
+                <select
+                  id="breed"
+                  value={form.breed}
+                  onChange={(e) => update("breed", e.target.value)}
+                >
+                  <option value="">Select breed</option>
+                  {DOG_BREEDS.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          <div className={styles.row}>
-            <div className={styles.field}>
-              <label htmlFor="breed">Dog&apos;s Breed *</label>
-              <select
-                id="breed"
-                value={form.breed}
-                onChange={(e) => update("breed", e.target.value)}
-              >
-                <option value="">Select breed</option>
-                {DOG_BREEDS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
+          {/* Full width on its own — the row above is a two-column grid, and a
+              third child would drop into a half-width orphan column. */}
+          <div className={styles.field}>
+            <label>Is your {petNoun} aggressive? *</label>
+            <div className={styles.toggle}>
+              {(["No", "Yes"] as const).map((opt) => (
+                <button
+                  type="button"
+                  key={opt}
+                  className={`${styles.toggleBtn} ${
+                    form.aggressive === opt ? styles.toggleOn : ""
+                  }`}
+                  onClick={() => chooseAggressive(opt)}
+                >
+                  {opt === "No" ? "😊 No" : "⚠️ Yes"}
+                </button>
+              ))}
             </div>
-            <div className={styles.field}>
-              <label>Is your dog aggressive? *</label>
-              <div className={styles.toggle}>
-                {(["No", "Yes"] as const).map((opt) => (
-                  <button
-                    type="button"
-                    key={opt}
-                    className={`${styles.toggleBtn} ${
-                      form.aggressive === opt ? styles.toggleOn : ""
-                    }`}
-                    onClick={() => chooseAggressive(opt)}
-                  >
-                    {opt === "No" ? "😊 No" : "⚠️ Yes"}
-                  </button>
-                ))}
-              </div>
-              {form.aggressive === "Yes" && aggressiveAck && (
-                <small style={{ color: "#1c7c3f", fontSize: ".72rem", fontWeight: 600 }}>
-                  ✓ Grooming conditions accepted
-                </small>
-              )}
-            </div>
+            {form.aggressive === "Yes" && aggressiveAck && (
+              <small style={{ color: "#1c7c3f", fontSize: ".72rem", fontWeight: 600 }}>
+                ✓ Grooming conditions accepted
+              </small>
+            )}
           </div>
 
           <div className={styles.field}>
@@ -689,13 +801,41 @@ export default function Booking({
             </p>
           )}
 
+          {/* The block, said before there is anything to tap. It carries its own
+              way out — a WhatsApp link that already names the day and time we
+              hold — because "contact us" with no link is a dead end on a phone. */}
+          {alreadyBooked && (
+            <div className={styles.alreadyBooked} role="status">
+              <strong>You already have a reservation on this date.</strong>
+              <p>
+                We have you down for <strong>{alreadyBooked.timeLabel}</strong>. We take one
+                appointment per phone number per day — to move or change it, just message
+                us.
+              </p>
+              <a
+                className={styles.alreadyBookedWa}
+                href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(
+                  `Hi Bubbly Pup! I already have a booking on ${form.date} at ${alreadyBooked.timeLabel} and I would like to change it 🐾`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                💬 Message us to change it
+              </a>
+            </div>
+          )}
+
           <button
             type="submit"
             className={`btn btn-whatsapp ${styles.submit}`}
-            disabled={submitting}
+            disabled={submitting || !!alreadyBooked}
           >
             <span className={styles.waGlyph}>💬</span>
-            {submitting ? "Booking…" : "Send Reservation to WhatsApp"}
+            {submitting
+              ? "Booking…"
+              : alreadyBooked
+              ? "You already have a booking this day"
+              : "Send Reservation to WhatsApp"}
           </button>
           <p className={styles.fineprint}>
             Opens WhatsApp to {SITE.whatsappDisplay} with your details
@@ -773,18 +913,18 @@ export default function Booking({
                 ⚠️
               </span>
               <h3 className={styles.consentTitle} id="aggressive-title">
-                Important Notice – Aggressive Dog
+                Important Notice – Aggressive {PetNoun}
               </h3>
             </div>
             <div className={styles.consentBody}>
               <p>
-                Grooming an aggressive or highly anxious dog can be challenging and may not
-                always be possible to complete safely. Our groomers will always do their best
-                to provide the requested grooming service while prioritizing the safety and
-                well-being of your dog and our staff.
+                Grooming an aggressive or highly anxious {petNoun} can be challenging and may
+                not always be possible to complete safely. Our groomers will always do their
+                best to provide the requested grooming service while prioritizing the safety
+                and well-being of your {petNoun} and our staff.
               </p>
               <p>
-                If your dog shows severe aggression, attempts to bite, or becomes too
+                If your {petNoun} shows severe aggression, attempts to bite, or becomes too
                 distressed during grooming, we may need to pause, modify, or stop the grooming
                 session. In such cases, some requested grooming services may not be completed.
               </p>
@@ -799,7 +939,7 @@ export default function Booking({
                 />
                 <span>
                   I understand and accept the above conditions regarding grooming an
-                  aggressive dog and agree to proceed with the appointment.
+                  aggressive {petNoun} and agree to proceed with the appointment.
                 </span>
               </label>
 

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AppointmentStatus, PetGender, Prisma } from "@prisma/client";
+import { AppointmentSource, AppointmentStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getSettings, toBusinessRules, RELEASED_STATUSES } from "@/lib/settings";
-import { computeEndMin, toMinutes, to12h, validateBooking } from "@/lib/booking-engine";
+import { computeEndMin, toMinutes, to12h } from "@/lib/booking-engine";
+import { validateSlotBooking } from "@/lib/booking-slots";
 import { salonNow, dateOnly, formatDateLabel } from "@/lib/time";
 import { bookingConfirmationBody } from "@/lib/whatsapp";
 import { isValidPhone, PHONE_HINT, toStoredPhone } from "@/lib/phone";
+import { alreadyBookedMessage, bookedTimeLabel, sameDayWhere } from "@/lib/one-per-day";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,6 @@ const BookingSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   start: z.string().regex(/^\d{2}:\d{2}$/),
   owner: z.object({
-    name: z.string().min(1),
     // A bookable appointment we can't message is worse than no appointment —
     // the browser checks this too, but the browser is not a trust boundary.
     //
@@ -34,9 +35,11 @@ const BookingSchema = z.object({
   }),
   pet: z.object({
     name: z.string().min(1),
+    // Defaulted rather than required so a stale tab still books: before cats
+    // were offered the form sent no species at all, and every one of those
+    // bookings was a dog.
+    species: z.enum(["DOG", "CAT"]).default("DOG"),
     breed: z.string().optional(),
-    age: z.string().optional(),
-    gender: z.enum(["MALE", "FEMALE", "UNKNOWN"]).optional().default("UNKNOWN"),
     notes: z.string().optional(),
   }),
   notes: z.string().optional(),
@@ -104,35 +107,44 @@ export async function POST(req: Request) {
       // and the lock is released when the transaction ends.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${data.date}))`;
 
+      // Only the START matters now: a booking occupies one of the two places in
+      // its 2-hour period regardless of how long the groom itself runs.
       const existing = await tx.appointment.findMany({
         where: { date: dateOnly(data.date), status: { notIn: RELEASED_STATUSES } },
-        select: { startMin: true, endMin: true, package: { select: { startGapMin: true } } },
+        select: { startMin: true },
       });
-      const check = validateBooking({
+      const check = validateSlotBooking({
         dateISO: data.date,
         startMin,
-        durationMin,
-        gapMin: pkg.startGapMin,
         rules,
-        existing: existing.map((e) => ({
-          start: e.startMin,
-          end: e.endMin,
-          gapMin: e.package.startGapMin,
-        })),
+        existing: existing.map((e) => ({ start: e.startMin })),
         nowMin,
         todayISO: now.dateISO,
       });
       if (!check.ok) throw new BookingError(check.reason);
 
+      // One reservation per phone per day (lib/one-per-day.ts). Checked HERE,
+      // inside the same per-date advisory lock as the slot check, because the
+      // form's pre-check is a courtesy and not a guarantee: two tabs, a stale
+      // page, or a request replayed by hand all reach this line, and only the
+      // lock makes "read then write" safe against the customer's own second
+      // submit landing in the same instant.
+      const held = await tx.appointment.findFirst({
+        where: sameDayWhere(data.owner.phone, data.date),
+        select: { startMin: true },
+        orderBy: { startMin: "asc" },
+      });
+      if (held) throw new AlreadyBookedError(alreadyBookedMessage(bookedTimeLabel(held.startMin)));
+
       // Reuse a customer by phone, otherwise create.
+      // The phone IS the identity — no name is collected, so a repeat customer
+      // keeps whatever name their row already carries rather than losing it.
       const customer = await tx.customer.upsert({
         where: { phone: data.owner.phone },
         update: {
-          name: data.owner.name,
           email: data.owner.email || undefined,
         },
         create: {
-          name: data.owner.name,
           phone: data.owner.phone,
           email: data.owner.email || undefined,
         },
@@ -141,9 +153,8 @@ export async function POST(req: Request) {
       const pet = await tx.pet.create({
         data: {
           name: data.pet.name,
+          species: data.pet.species,
           breed: data.pet.breed,
-          age: data.pet.age,
-          gender: (data.pet.gender ?? "UNKNOWN") as PetGender,
           notes: data.pet.notes,
           customerId: customer.id,
         },
@@ -154,7 +165,6 @@ export async function POST(req: Request) {
       // it with one tap from the admin — free wa.me, no per-message billing.
       const confirmationBody = bookingConfirmationBody({
         businessName: settings.businessName,
-        ownerName: data.owner.name,
         petName: data.pet.name,
         packageName: pkg.name,
         dateLabel: formatDateLabel(dateOnly(data.date)),
@@ -174,6 +184,10 @@ export async function POST(req: Request) {
           endMin,
           durationMin,
           status: AppointmentStatus.PENDING_CONFIRMATION,
+          // The customer reserved this themselves. Stated rather than left to
+          // the column default, so the one place ONLINE is written is the one
+          // place a reservation is actually taken.
+          source: AppointmentSource.ONLINE,
           priceEstimate,
           notes: data.notes,
           payment: { create: {} },
@@ -203,6 +217,11 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (err) {
+    if (err instanceof AlreadyBookedError) {
+      // 409, like a taken slot — but flagged, because the two need opposite
+      // advice: one says "pick another time", this one says "talk to us".
+      return NextResponse.json({ error: err.message, reason: "already-booked" }, { status: 409 });
+    }
     if (err instanceof BookingError) {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
@@ -216,3 +235,4 @@ export async function POST(req: Request) {
 }
 
 class BookingError extends Error {}
+class AlreadyBookedError extends Error {}

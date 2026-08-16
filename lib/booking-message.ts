@@ -16,11 +16,10 @@ export type ReservationInput = {
   addOns: { label: string; price: string }[];
   dateISO: string; // YYYY-MM-DD
   slotLabel: string; // "09:00 AM"
-  ownerName: string;
   ownerPhone: string;
-  dogName: string;
-  dogAge: string;
-  breed: string;
+  petType: string; // "Dog" | "Cat"
+  petName: string;
+  breed: string; // dogs only — empty for a cat
   aggressive: string; // "Yes" | "No"
   notes: string;
 };
@@ -56,16 +55,17 @@ export function reservationRequestBody(m: ReservationInput): string {
     );
   }
 
+  const isCat = m.petType === "Cat";
   lines.push(
     "",
     "👤 *Owner*",
-    `   • Name:  ${m.ownerName}`,
     `   • WhatsApp:  ${formatPhone(m.ownerPhone)}`,
     "",
-    "🐶 *Dog*",
-    `   • Name:  ${m.dogName}`,
-    `   • Age:  ${m.dogAge}`,
-    `   • Breed:  ${m.breed}`,
+    `${isCat ? "🐱" : "🐶"} *${m.petType || "Pet"}*`,
+    `   • Name:  ${m.petName}`,
+    // Cats are booked without a breed. An empty "Breed:" line would read as a
+    // detail the customer forgot rather than one that doesn't apply to them.
+    ...(m.breed ? [`   • Breed:  ${m.breed}`] : []),
     // Flagged, not buried in the list — the groomer plans the session around it.
     m.aggressive === "Yes"
       ? "   • Aggressive:  *YES* ⚠️ _(owner accepted the grooming conditions)_"

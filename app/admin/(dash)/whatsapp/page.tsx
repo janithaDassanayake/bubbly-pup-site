@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Prisma, NotificationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { waLink, NOTIFICATION_LABEL } from "@/lib/whatsapp";
+import { petIcon } from "@/lib/pet";
+import { formatPhone } from "@/lib/phone";
 import { salonDayRangeUtc, formatSalonDateTime } from "@/lib/time";
 import { SendWhatsApp } from "../ActionButtons";
 import { LiveDateRange } from "../Filters";
@@ -42,7 +44,7 @@ export default async function WhatsAppPage({
   const [notifications, total, pendingCount] = await Promise.all([
     prisma.notification.findMany({
       where,
-      include: { appointment: { include: { customer: true } } },
+      include: { appointment: { include: { customer: true, pet: true } } },
       orderBy: { createdAt: "desc" },
       take: TAKE,
     }),
@@ -135,11 +137,14 @@ export default async function WhatsAppPage({
               <tbody>
                 {notifications.map((n) => {
                   const c = STATUS_COLOR[n.status];
-                  const name = n.appointment?.customer.name ?? "";
+                  // Who it's going to: the pet the message is about, with the
+                  // number underneath — a customer has no name of their own now.
+                  const pet = n.appointment?.pet.name ?? "";
+                  const icon = n.appointment ? petIcon(n.appointment.pet.species) : "";
                   return (
                     <tr key={n.id}>
                       <td className="adm-strong" data-label="Type">{NOTIFICATION_LABEL[n.type]}</td>
-                      <td data-label="To">{name}<br /><span className="adm-note">{n.toPhone}</span></td>
+                      <td data-label="To">{pet ? `${icon} ${pet}` : "—"}<br /><span className="adm-note">{formatPhone(n.toPhone)}</span></td>
                       <td data-label="Message" style={{ maxWidth: 340 }}>
                         <span className="adm-note" style={{ whiteSpace: "pre-wrap", display: "block", maxHeight: 66, overflow: "hidden" }}>
                           {n.body}

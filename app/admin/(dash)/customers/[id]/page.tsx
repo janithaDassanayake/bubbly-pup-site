@@ -3,14 +3,12 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatDateLabel } from "@/lib/time";
 import { to12h } from "@/lib/booking-engine";
-import { formatLKR } from "@/lib/format";
-import { PetGender } from "@prisma/client";
+import { formatLKR, customerLabel } from "@/lib/format";
+import { petIcon } from "@/lib/pet";
 import StatusBadge from "../../StatusBadge";
 import EditContact from "./EditContact";
 
 export const dynamic = "force-dynamic";
-
-const GENDER: Record<PetGender, string> = { MALE: "Male", FEMALE: "Female", UNKNOWN: "—" };
 
 export default async function CustomerDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -32,10 +30,16 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
     <>
       <div className="adm-head">
         <div>
-          <h1>{customer.name}</h1>
+          {/* The pets are the heading now — a nameless customer would otherwise
+              be a page titled with the phone number printed again below it. */}
+          <h1>
+            {customer.pets.length
+              ? customer.pets.map((p) => `${petIcon(p.species)} ${p.name}`).join(", ")
+              : customerLabel(customer)}
+          </h1>
+          {customer.name && <p className="adm-note">{customer.name}</p>}
           <EditContact
             id={customer.id}
-            name={customer.name}
             phone={customer.phone}
             email={customer.email}
           />
@@ -54,15 +58,15 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
         <div className="adm-table-wrap">
           <table className="adm-table adm-cards">
             <thead>
-              <tr><th>Name</th><th>Breed</th><th>Age</th><th>Gender</th><th>Notes</th></tr>
+              <tr><th>Name</th><th>Breed</th><th>Notes</th></tr>
             </thead>
             <tbody>
               {customer.pets.map((p) => (
                 <tr key={p.id}>
-                  <td className="adm-strong" data-label="Name">{p.name}</td>
-                  <td data-label="Breed">{p.breed || "—"}</td>
-                  <td data-label="Age">{p.age || "—"}</td>
-                  <td data-label="Gender">{GENDER[p.gender]}</td>
+                  <td className="adm-strong" data-label="Name">{petIcon(p.species)} {p.name}</td>
+                  {/* A cat has no breed by design — say so, rather than leaving
+                      a dash that reads as a detail somebody forgot. */}
+                  <td data-label="Breed">{p.breed || (p.species === "CAT" ? "n/a for cats" : "—")}</td>
                   <td className="adm-note" data-label="Notes">{p.notes || "—"}</td>
                 </tr>
               ))}

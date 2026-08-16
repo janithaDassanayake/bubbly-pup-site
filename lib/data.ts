@@ -84,7 +84,7 @@ export const PACKAGES: Package[] = [
   {
     id: "dry-bath",
     name: "Dry Bath",
-    blurb: "A waterless freshen-up for sensitive pups.",
+    blurb: "A waterless freshen-up for sensitive pets.",
     includes: ["Full Body Bath With Dry Shampoo"],
     emoji: "🧴",
   },
@@ -113,7 +113,24 @@ export type PriceTier = {
 };
 
 // Optional extras / à-la-carte services a customer can pick.
-export type AddOnCategory = "haircut" | "trim" | "colour" | "spa";
+//
+// One category PER SERVICE for the care items (bath, nails, ears, teeth,
+// perfume) rather than a single shared "care": `addOnsFor` hides an add-on when
+// the chosen package's `covers` lists its category, and the packages don't cover
+// the same set — Cat Bath & Care has no ear or teeth cleaning, Basic Bath has no
+// teeth. A shared category would either offer a second shampoo bath on a package
+// that already includes one, or hide an ear cleaning the cat package would
+// happily sell.
+export type AddOnCategory =
+  | "haircut"
+  | "trim"
+  | "colour"
+  | "spa"
+  | "bath"
+  | "nails"
+  | "ears"
+  | "teeth"
+  | "perfume";
 export type ServiceGroup = "addon" | "spa"; // which picker it shows in
 export type AddOn = {
   id: string;
@@ -136,7 +153,18 @@ export type PricePackage = {
   original?: string; // struck-through "before" total
   offer?: string; // single offer price
   tiers?: PriceTier[]; // two-tier offer (e.g. with / without knots)
+  // A one-line strapline under the title. Used to say what a package is NOT, in
+  // the same breath as its name — "wash" packages were being read as "grooming,
+  // so surely a haircut is in there".
+  tagline?: string;
+  // Shout the name in caps on the price card. The caps live in CSS, never in
+  // `name`: the same string is the booking dropdown, the WhatsApp confirmation
+  // and the admin appointment list, and a stored ALL-CAPS name shouts in all
+  // three — plus screen readers spell caps out letter by letter.
+  capsTitle?: boolean;
   note?: string;
+  // Louder than `note`: an exclusion the customer must not miss before booking.
+  warning?: string;
   popular?: boolean;
   // Add-on categories this package already covers — so we never offer
   // an add-on that overlaps with what's already included.
@@ -146,8 +174,14 @@ export type PricePackage = {
 export const PRICE_PACKAGES: PricePackage[] = [
   {
     id: "wash-premium",
-    name: "Grooming Package for Wash",
+    // Keep the name in step with lib/catalog.ts (the DB/admin name) — the
+    // customer's confirmation and the salon's appointment list should read the
+    // same words. The 🛁 is the card's emoji tile and the caps are `capsTitle`,
+    // so neither is part of the stored name.
+    name: "Full Bath & Cleaning Package",
     emoji: "🛁",
+    tagline: "NO HAIRCUT • NO BODY TRIM • NO SHAVE",
+    capsTitle: true,
     popular: true,
     rows: [
       { service: "Shampoo Bath", price: "Rs. 1,500" },
@@ -164,12 +198,21 @@ export const PRICE_PACKAGES: PricePackage[] = [
     ],
     original: "Rs. 8,000",
     offer: "Rs. 6,000",
-    note: "This package does not include full body trim.",
+    warning:
+      "⚠️ PLEASE NOTE: This package does NOT include a full-body haircut, body trim or shaving. Haircut / trim services are available separately.",
+    // Read straight off this card's own rows above — every one of these is
+    // already in the package, so selling it again as an add-on would charge
+    // twice for one service. `trim` is deliberately NOT here: the warning says
+    // the full-body trim is sold separately.
+    covers: ["bath", "ears", "nails", "teeth", "perfume"],
   },
   {
     id: "wash-basic",
-    name: "Basic Grooming Package for Wash",
-    emoji: "🐾",
+    // Same family as wash-premium above, so it shares its 🛁 and its caps.
+    name: "Basic Bath & Cleaning",
+    emoji: "🛁",
+    tagline: "NO FULL-BODY HAIRCUT • NO SHAVE",
+    capsTitle: true,
     rows: [
       { service: "Shampoo Bath", price: "Rs. 1,500" },
       { service: "Blow Dry", price: "Rs. 800" },
@@ -180,12 +223,19 @@ export const PRICE_PACKAGES: PricePackage[] = [
     ],
     original: "Rs. 4,500",
     offer: "Rs. 4,000",
-    note: "This package does not include full body trim and body massage.",
+    warning:
+      "⚠️ PLEASE NOTE: This package does not include a full-body haircut, body trim or body massage.",
+    // "Ear / Eyes / Paw Cleaning" covers `ears`. No teeth cleaning on this card,
+    // so that one stays sellable as an add-on.
+    covers: ["bath", "ears", "nails", "perfume"],
   },
   {
     id: "wash-trim",
-    name: "Grooming Package with Trim",
+    // The complement of the two bath packages above — this is the one that DOES
+    // include the full-body cut, so it shares their caps treatment.
+    name: "Full Body Haircut Package",
     emoji: "✂️",
+    capsTitle: true,
     rows: [
       { service: "Full Trim", price: "Rs. 3,500" },
       { service: "With Knots", price: "Rs. 4,500" },
@@ -209,13 +259,19 @@ export const PRICE_PACKAGES: PricePackage[] = [
         offer: "Rs. 7,000",
       },
     ],
-    note: "You can add extra services if needed.",
-    covers: ["trim"], // already includes a full trim — don't offer it again
+    // Already includes a full trim — don't offer it again — plus the bath,
+    // nails, ears and perfume listed on its card. No teeth cleaning there, so
+    // that stays sellable.
+    covers: ["trim", "bath", "nails", "ears", "perfume"],
   },
   {
     id: "cat",
-    name: "Grooming Package for Cat",
+    name: "Cat Bath & Care",
     emoji: "🐱",
+    // Shouted on the card like the other three, so the row of names reads as a
+    // set. The caps are CSS only — the stored name stays Title Case for the
+    // WhatsApp confirmation, the admin list and screen readers.
+    capsTitle: true,
     rows: [
       { service: "Shampoo Bath", price: "Rs. 1,500" },
       { service: "Blow Dry", price: "Rs. 800" },
@@ -225,38 +281,49 @@ export const PRICE_PACKAGES: PricePackage[] = [
     ],
     original: "Rs. 4,000",
     offer: "Rs. 3,500",
-    covers: ["trim"], // cats aren't offered a full-body trim/shave
+    // Cats aren't offered a full-body trim/shave. Ears and teeth are NOT on the
+    // cat card, so both stay available as add-ons.
+    covers: ["trim", "bath", "nails", "perfume"],
   },
 ];
 
 // Every à-la-carte service: trims/cuts/colour ("addon" group) + spa treatments
 // ("spa" group). Each is individually selectable and priced.
+// The salon's à-la-carte list. `id` is also the catalog/database key, so the
+// ids of the four original services are kept even where the wording changed
+// ("haircut" now reads Face Cut) — a new id would strand the existing rows and
+// every appointment that links to them.
 export const ADD_ONS: AddOn[] = [
-  { id: "haircut", label: "Hair Cut", price: "Rs. 2,500", category: "haircut", group: "addon" },
   {
     id: "trim-noknots",
-    label: "Full body trim / shave (without knots)",
+    label: "Full Trim (without knots)",
     price: "Rs. 3,500",
     category: "trim",
     group: "addon",
   },
   {
     id: "trim-knots",
-    label: "Full body trim / shave (with knots)",
+    label: "Full Trim (with knots)",
     price: "Rs. 4,500",
     category: "trim",
     group: "addon",
   },
+  { id: "haircut", label: "Face Cut", price: "Rs. 1,500", category: "haircut", group: "addon" },
   {
     id: "colour",
     label: "Pet Hair Colouring",
-    price: "Rs. 5,000",
+    price: "Rs. 1,000",
     category: "colour",
     group: "addon",
   },
-  { id: "spa-pawbutter", label: "Paw Butter Cream + Massage", price: "Rs. 1,000", category: "spa", group: "spa" },
+  { id: "bath", label: "Shampoo Bath", price: "Rs. 2,800", category: "bath", group: "addon" },
+  { id: "nails", label: "Nail Clipping", price: "Rs. 500", category: "nails", group: "addon" },
+  { id: "ears", label: "Ear Cleaning", price: "Rs. 500", category: "ears", group: "addon" },
+  { id: "teeth", label: "Teeth Cleaning", price: "Rs. 450", category: "teeth", group: "addon" },
+  { id: "perfume", label: "Perfume Application", price: "Rs. 350", category: "perfume", group: "addon" },
+  { id: "spa-pawbutter", label: "Paw Butter Cream + Massage", price: "Rs. 1,500", category: "spa", group: "spa" },
   { id: "spa-oil", label: "Full Body Oil Massage", price: "Rs. 2,500", category: "spa", group: "spa" },
-  { id: "spa-conditioner", label: "Conditioner Treatment", price: "Rs. 3,500", category: "spa", group: "spa" },
+  { id: "spa-conditioner", label: "Conditioner", price: "Rs. 1,000", category: "spa", group: "spa" },
 ];
 
 // Split by picker.
@@ -276,10 +343,16 @@ export const tierOptionName = (pkgName: string, tierLabel: string) =>
 export const packageOptionNames = (p: PricePackage): string[] =>
   p.tiers ? p.tiers.map((t) => tierOptionName(p.name, t.label)) : [p.name];
 
+// Booking a spa visit with no grooming package. Declared here, ABOVE its first
+// use, and referenced everywhere instead of being retyped — the same string is
+// the dropdown entry, the price-card heading and the value `packageKeyForOption`
+// matches on, so a copy that drifts silently breaks booking a spa visit.
+export const SPA_OPTION = "Spa & Treatments";
+
 // Options offered in the booking form's package dropdown.
 export const BOOKING_OPTIONS: string[] = [
   ...PRICE_PACKAGES.flatMap(packageOptionNames),
-  "Spa Treatments",
+  SPA_OPTION,
   SINGLE_SERVICE,
 ];
 
@@ -297,12 +370,21 @@ export function packageForOption(
   return null;
 }
 
-// Booking a spa visit with no grooming package.
-export const SPA_OPTION = "Spa Treatments";
+// Add-on categories a CATALOG PACKAGE KEY already includes — the same `covers`
+// rules the website uses to hide an add-on, but reachable from the admin, which
+// knows appointments by package key rather than by marketing option name.
+// Without this the salon's own booking form would happily add a paid Shampoo
+// Bath to a package whose card already lists one.
+export function coveredCategoriesForKey(packageKey: string): AddOnCategory[] {
+  const p = PRICE_PACKAGES.find(
+    (x) => x.id === packageKey || x.tiers?.some((t) => t.key === packageKey)
+  );
+  return p?.covers ?? [];
+}
 
 // Which services a chosen option can be combined with.
 export function addOnsFor(packageName: string): AddOn[] {
-  // "Spa Treatments" means the spa menu — it used to fall through to the
+  // "Spa & Treatments" means the spa menu — it used to fall through to the
   // trims/cuts/colour list, so picking it offered a Full Body Trim and no
   // massage at all.
   if (packageName === SPA_OPTION) return SPA_SERVICES;
@@ -311,7 +393,7 @@ export function addOnsFor(packageName: string): AddOn[] {
   return EXTRA_SERVICES.filter((a) => !covered.includes(a.category));
 }
 
-// Options that ARE the services picked under them — "Spa Treatments" and
+// Options that ARE the services picked under them — "Spa & Treatments" and
 // "Single service" carry no package of their own, so at least one service has
 // to be chosen or there is nothing to price.
 export const isServiceOnlyOption = (name: string) =>
@@ -335,12 +417,17 @@ export const VALUE_PROPS = [
   {
     emoji: "💖",
     title: "Stress-free & gentle",
-    text: "Calm, patient grooming — even nervous or first-time pups feel safe.",
+    text: "Calm, patient grooming — even nervous or first-time pets feel safe.",
   },
+  // Replaced the old "6 free add-ons" claim: the six were nails, ears, teeth,
+  // paw butter, combing and perfume "with every package", and the price cards
+  // don't bear that out — Cat Bath & Care carries no ear or teeth cleaning, and
+  // nothing lists paw butter. These four ARE on all four packages' cards, so
+  // this is the strongest promise the price list actually backs.
   {
-    emoji: "🎁",
-    title: "6 free add-ons",
-    text: "Nails, ears, teeth, paw butter, combing & perfume with every package.",
+    emoji: "🧼",
+    title: "Complete packages",
+    text: "Shampoo bath, brushing, nail clipping and perfume in every package.",
   },
   {
     emoji: "📸",

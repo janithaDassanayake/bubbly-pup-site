@@ -4,24 +4,34 @@
 // availability a customer would, and can't create a double booking.
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AppointmentStatus, PetGender } from "@prisma/client";
+import { AppointmentStatus, PetSpecies } from "@prisma/client";
 import { createAppointment, findCustomerByPhone } from "../../../actions";
 import { formatLKR } from "@/lib/format";
+import { DOG_BREEDS } from "@/lib/breeds";
+import { petIcon, petNoun } from "@/lib/pet";
 
-type Pkg = { key: string; name: string; durationMin: number; price: number; standalone: boolean };
-type AddOn = { key: string; name: string; price: number; group: string };
+type Pkg = { key: string; name: string; price: number; standalone: boolean };
+type AddOn = { key: string; name: string; price: number; group: string; category: string };
 type Slot = { value: string; label: string; taken?: boolean; reason?: "booked" | "passed" };
-type Pet = { id: string; name: string; breed: string | null; age: string | null };
+type Pet = { id: string; name: string; species: PetSpecies; breed: string | null };
 
 const NEW_PET = "__new__";
+
+// Same two options the website offers, in the same order.
+const SPECIES: PetSpecies[] = ["DOG", "CAT"];
 
 export default function NewAppointmentForm({
   packages,
   addOns,
+  includedByPackage,
   todayISO,
 }: {
   packages: Pkg[];
   addOns: AddOn[];
+  // package key → add-on keys that package already includes. Marked, never
+  // removed: the salon can still add a second bath for a filthy pet, it just
+  // shouldn't do it by accident.
+  includedByPackage: Record<string, string[]>;
   todayISO: string;
 }) {
   const router = useRouter();
@@ -35,21 +45,30 @@ export default function NewAppointmentForm({
   const [slotsLoading, setSlotsLoading] = useState(false);
 
   const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [knownPets, setKnownPets] = useState<Pet[]>([]);
   const [foundExisting, setFoundExisting] = useState(false);
 
   const [petId, setPetId] = useState(NEW_PET);
   const [petName, setPetName] = useState("");
+  const [petSpecies, setPetSpecies] = useState<PetSpecies>("DOG");
   const [petBreed, setPetBreed] = useState("");
-  const [petAge, setPetAge] = useState("");
-  const [petGender, setPetGender] = useState<PetGender>("UNKNOWN");
+  const [aggressive, setAggressive] = useState<"" | "Yes" | "No">("");
 
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<AppointmentStatus>("CONFIRMED");
   const [queueConfirmation, setQueueConfirmation] = useState(true);
   const [error, setError] = useState("");
+
+  // Breed is dog-only, so switching to Cat clears whatever was chosen — the
+  // field is gone from the form by then and nobody could spot it there.
+  const changeSpecies = (s: PetSpecies) => {
+    setPetSpecies(s);
+    if (s !== "DOG") setPetBreed("");
+  };
+
+  const isDog = petSpecies === "DOG";
+  const noun = petNoun(petSpecies);
 
   const pkg = packages.find((p) => p.key === packageKey);
   const total = (pkg?.price ?? 0) + addOns.filter((a) => picked.includes(a.key)).reduce((s, a) => s + a.price, 0);
@@ -87,7 +106,6 @@ export default function NewAppointmentForm({
       // A failed lookup is a convenience feature, not worth crashing the form.
       const r = await findCustomerByPhone(phone).catch(() => ({ ok: false, customer: undefined }));
       if (r.customer) {
-        setName(r.customer.name);
         setEmail(r.customer.email ?? "");
         setKnownPets(r.customer.pets);
         setFoundExisting(true);
@@ -106,6 +124,12 @@ export default function NewAppointmentForm({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    // Mirrors the website's own checks — a phone booking shouldn't be able to
+    // record less about the pet than the customer would have typed themselves.
+    if (petId === NEW_PET && !aggressive) {
+      setError(`Please record whether the ${noun} is aggressive.`);
+      return;
+    }
     start(async () => {
       try {
         const r = await createAppointment({
@@ -113,14 +137,13 @@ export default function NewAppointmentForm({
           addOnKeys: picked,
           date,
           start: slot,
-          ownerName: name,
           ownerPhone: phone,
           ownerEmail: email,
           petId: petId === NEW_PET ? undefined : petId,
           petName: petId === NEW_PET ? petName : undefined,
+          petSpecies: petId === NEW_PET ? petSpecies : undefined,
           petBreed: petId === NEW_PET ? petBreed : undefined,
-          petAge: petId === NEW_PET ? petAge : undefined,
-          petGender: petId === NEW_PET ? petGender : undefined,
+          petAggressive: petId === NEW_PET ? aggressive : undefined,
           notes,
           status,
           queueConfirmation,
@@ -144,7 +167,12 @@ export default function NewAppointmentForm({
               <option value="">Choose…</option>
               {packages.map((p) => (
                 <option key={p.key} value={p.key}>
-                  {p.name} · {p.durationMin} min · {formatLKR(p.price)}
+                  {/* No duration: the salon knows how long its own packages run,
+                      and a standalone row's 30 min is the slot it holds, not a
+                      groom anybody booked. The price is dropped for the Rs. 0
+                      rows too — those are billed from the services chosen. */}
+                  {p.name}
+                  {p.price > 0 ? ` · ${formatLKR(p.price)}` : ""}
                 </option>
               ))}
             </select>
@@ -165,15 +193,24 @@ export default function NewAppointmentForm({
             <div className="adm-chips">
               {addOns.map((a) => {
                 const on = picked.includes(a.key);
+                const included = (includedByPackage[packageKey] ?? []).includes(a.key);
                 return (
                   <button
                     type="button"
                     key={a.key}
-                    className={`adm-chip ${on ? "adm-chip-on" : ""}`}
+                    className={`adm-chip ${on ? "adm-chip-on" : ""} ${
+                      included ? "adm-chip-included" : ""
+                    }`}
                     onClick={() => toggleAddOn(a.key)}
                     aria-pressed={on}
+                    title={
+                      included
+                        ? "Already included in the chosen package — adding it charges for it a second time"
+                        : undefined
+                    }
                   >
                     {on ? "✓" : "+"} {a.name} · {formatLKR(a.price)}
+                    {included && <span className="adm-chip-tag">in package</span>}
                   </button>
                 );
               })}
@@ -229,25 +266,19 @@ export default function NewAppointmentForm({
         </div>
 
         <h2 className="adm-form-h">3 · Customer</h2>
-        <div className="adm-grid-2">
-          <label className="adm-field">
-            <span>WhatsApp number *</span>
-            <input
-              type="tel"
-              inputMode="tel"
-              placeholder="e.g. 071 234 5678"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              onBlur={lookup}
-              required
-            />
-            {foundExisting && <small className="adm-note">✓ Existing customer — details filled in</small>}
-          </label>
-          <label className="adm-field">
-            <span>Customer name *</span>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-          </label>
-        </div>
+        <label className="adm-field">
+          <span>WhatsApp number *</span>
+          <input
+            type="tel"
+            inputMode="tel"
+            placeholder="e.g. 071 234 5678"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            onBlur={lookup}
+            required
+          />
+          {foundExisting && <small className="adm-note">✓ Existing customer — their pets are listed below</small>}
+        </label>
 
         <h2 className="adm-form-h">4 · Pet</h2>
         {knownPets.length > 0 && (
@@ -256,7 +287,7 @@ export default function NewAppointmentForm({
             <select value={petId} onChange={(e) => setPetId(e.target.value)}>
               {knownPets.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {petIcon(p.species)} {p.name}
                   {p.breed ? ` · ${p.breed}` : ""}
                 </option>
               ))}
@@ -267,9 +298,29 @@ export default function NewAppointmentForm({
 
         {petId === NEW_PET && (
           <>
-            <div className="adm-grid-2">
+            {/* Asked first, as on the website: it decides whether a breed is
+                wanted at all, and the wording of the fields under it. */}
+            <div className="adm-field">
+              <span>Dog or cat? *</span>
+              <div className="adm-chips">
+                {SPECIES.map((s) => (
+                  <button
+                    type="button"
+                    key={s}
+                    className={`adm-chip ${petSpecies === s ? "adm-chip-on" : ""}`}
+                    onClick={() => changeSpecies(s)}
+                    aria-pressed={petSpecies === s}
+                  >
+                    {petIcon(s)} {s === "DOG" ? "Dog" : "Cat"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Two columns only while there's a breed field to fill the second
+                one — alone, the name would sit in a half-width orphan. */}
+            <div className={isDog ? "adm-grid-2" : undefined}>
               <label className="adm-field">
-                <span>Pet name *</span>
+                <span>{isDog ? "Dog" : "Cat"}&apos;s name *</span>
                 <input
                   type="text"
                   placeholder="e.g. Coco"
@@ -278,29 +329,41 @@ export default function NewAppointmentForm({
                   required
                 />
               </label>
-              <label className="adm-field">
-                <span>Breed</span>
-                <input type="text" value={petBreed} onChange={(e) => setPetBreed(e.target.value)} />
-              </label>
+              {/* The same list the customer picks from on the website — typed
+                  breeds drifted ("Lab", "labrador", "Golden R.") and stopped
+                  matching the ones booked online. Dogs only: a cat groom isn't
+                  planned by breed, so the website doesn't collect one either. */}
+              {isDog && (
+                <label className="adm-field">
+                  <span>Dog&apos;s breed *</span>
+                  <select value={petBreed} onChange={(e) => setPetBreed(e.target.value)} required>
+                    <option value="">Select breed</option>
+                    {DOG_BREEDS.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
-            <div className="adm-grid-2">
-              <label className="adm-field">
-                <span>Age</span>
-                <input
-                  type="text"
-                  placeholder="e.g. 2 years"
-                  value={petAge}
-                  onChange={(e) => setPetAge(e.target.value)}
-                />
-              </label>
-              <label className="adm-field">
-                <span>Gender</span>
-                <select value={petGender} onChange={(e) => setPetGender(e.target.value as PetGender)}>
-                  <option value="UNKNOWN">Not specified</option>
-                  <option value="MALE">Male</option>
-                  <option value="FEMALE">Female</option>
-                </select>
-              </label>
+            {/* Asked on the website too, and it changes how the session is
+                planned — a booking taken over the phone must not skip it. */}
+            <div className="adm-field">
+              <span>Is the {noun} aggressive? *</span>
+              <div className="adm-chips">
+                {(["No", "Yes"] as const).map((opt) => (
+                  <button
+                    type="button"
+                    key={opt}
+                    className={`adm-chip ${aggressive === opt ? "adm-chip-on" : ""}`}
+                    onClick={() => setAggressive(opt)}
+                    aria-pressed={aggressive === opt}
+                  >
+                    {opt === "No" ? "😊 No" : "⚠️ Yes"}
+                  </button>
+                ))}
+              </div>
             </div>
           </>
         )}
@@ -321,7 +384,7 @@ export default function NewAppointmentForm({
 
         {pkg && (
           <p className="adm-total">
-            {pkg.durationMin} min · estimated <strong>{formatLKR(total)}</strong>
+            estimated <strong>{formatLKR(total)}</strong>
           </p>
         )}
 

@@ -1,17 +1,432 @@
-/* Packages live in the conveyor slider (CardSlider). What's left down here is
-   the à-la-carte pickers, side by side and the same height. */
-.extras {
-  margin-top: 46px;
+/* ---------- the package comparison grid ---------- */
+/* Four plan cards in one view, side by side, in the shape a plan chooser is
+   normally read in (see pricefix.png). This replaced a conveyor slider: the
+   cards moved when the pointer neared an edge, so only the centred one could be
+   read and comparing two of them meant chasing them across the screen.
+
+   The grid sits OUTSIDE .container and gets its own slightly wider gutter — at
+   the site's 1180px a four-up row leaves ~265px per card, which is too tight for
+   service names like "Hair Trimming (Sanitary Areas Only)". */
+.gridWrap {
+  width: 100%;
+  padding: 0 22px;
+  /* Breathing room under the intro line. Without it the first card's top edge
+     sat against the last line of the subtitle and the two read as one block. */
+  margin-top: 34px;
+}
+
+/* SIX row tracks per card — badge, name, price, notes, button, included list —
+   shared by every card in the row, because each card is a subgrid of them. That
+   is what puts the four prices on one line, the four buttons on one line and
+   the four "what's included" dividers on one line: a track is as tall as the
+   tallest card's content, and the others match it instead of each stacking to
+   its own rhythm. Row spacing is carried by the items' own margins (see
+   .offerRow, .cta, .included), NOT by a row-gap, so the gaps can differ between
+   rows the way a card's internal spacing should. */
+.grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 20px;
+  row-gap: 0;
   align-items: stretch;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* The Reveal wrapper is the grid item; the card inside fills it. Keeping them
+   separate elements keeps the reveal's transform off the card, which owns the
+   hover lift — one transform property, two owners, otherwise. It passes the row
+   tracks through to the card, which is the real subgrid.
+   The bottom margin is the gap BETWEEN rows of cards once the grid wraps to two
+   up; row-gap can't do that job here, since it would also open a gap between
+   every row inside the card. */
+.cell {
+  display: grid;
+  grid-row: span 6;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  margin-bottom: 20px;
+}
+
+/* Tablet: two up. Three would leave a lone card on the second row and a hole
+   beside it; two reads as two tidy pairs. */
+@media (max-width: 1120px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 18px;
+    max-width: 760px;
+  }
+}
+
+/* Phone: one card per row, full width. */
+@media (max-width: 680px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 460px;
+    column-gap: 16px;
+  }
+}
+
+/* ---------- a package card ---------- */
+/* Every card carries the SAME 2px border, and only its colour changes on the
+   highlighted one — a border that changed WIDTH would make that card a pixel
+   taller than its neighbours and break the row. The colour is pink-300 rather
+   than the old pink-100, which was so close to the cream page that three of the
+   four cards looked like floating text with no edge at all. */
+.card {
+  position: relative;
+  display: grid;
+  grid-row: span 6;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  width: 100%;
+  background: #fff;
+  border: 2px solid var(--pink-300);
+  border-radius: 18px;
+  padding: 20px 18px 22px;
+  box-shadow: 0 24px 50px -36px rgba(255, 105, 180, 0.4);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  border-color: var(--pink-500);
+  box-shadow: 0 34px 66px -30px rgba(255, 105, 180, 0.55);
+}
+
+.popular {
+  border-color: var(--pink-500);
+  background: linear-gradient(180deg, #fff, var(--pink-50));
+}
+
+.popular:hover {
+  border-color: var(--pink-600);
+}
+
+/* The badge sits INSIDE the card, and its row is rendered on every card whether
+   or not it holds a badge, so the four names stay on one line across the row. */
+.badgeRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 26px;
+  margin-bottom: 10px;
+}
+
+.badge {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
+  padding: 5px 13px;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px -10px rgba(255, 105, 180, 0.7);
+}
+
+/* ---------- head: emoji, name, tagline ---------- */
+.cardHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 9px;
+}
+
+.emoji {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
+}
+
+/* The name box is TWO lines tall on every card, and its line box is set in rem
+   rather than as a multiplier. Both are alignment, not decoration:
+     • at four-up a card is ~270px, where "Full Bath & Cleaning Package" wraps
+       to two lines and "Cat Bath & Care" doesn't — a natural-height box put
+       those two cards' prices 19px apart;
+     • a unitless line-height would scale with each title's own font-size, so
+       the caps titles (0.95rem) and the Title Case ones (1.05rem) would sit on
+       line boxes 2px apart.
+   A one-line name centres itself in the reserved box, so the space reads as
+   breathing room rather than as a gap. */
+.cardHead h3 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.7rem;
+  font-size: 1.05rem;
+  color: var(--plum);
+  line-height: 1.35rem;
+  margin: 0;
+}
+
+/* Caps for the card only — the stored name stays Title Case so the WhatsApp
+   message and the admin list don't shout. Slightly smaller because caps run
+   wider, and tracked out a touch so a long all-caps name still scans. */
+.cardHead h3.capsTitle {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* "NO HAIRCUT • NO BODY TRIM • NO SHAVE" — small, uppercase and tracked out, so
+   it reads as a spec line belonging to the title rather than a second heading. */
+.tagline {
+  /* One line is RESERVED whether or not this package has a tagline — an empty
+     <p> collapses to nothing, and that missing line is what used to leave the
+     Cat and Haircut cards' prices sitting higher than the other two. Sized in
+     em so it tracks the font through every breakpoint below. */
+  min-height: 1.35em;
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  color: var(--pink-700);
+}
+
+/* ---------- price + CTA ---------- */
+/* Both live above the included list, each in its own shared row track, so the
+   row can be read across instead of down. Every card carries the SAME panel —
+   label, struck original, offer — so the four are identical in size and shape
+   and the track needs no stretching to line them up.
+   The border is on EVERY panel, transparent until picked, so selecting one
+   can't make it a few pixels taller than the three beside it. */
+.offerRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 11px 14px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
+}
+
+/* The same panel as a button, for a package that comes in two variants. Its
+   twin sits one row down among the other cards' notes, so "without knots" reads
+   across the row with every other price and "with knots" reads across with
+   every "please note". */
+.offerPick {
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.offerPick:hover {
+  border-color: var(--pink-400);
+}
+
+/* the chosen variant — this is the one the Book button books */
+.offerPickOn {
+  border-color: var(--pink-600);
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.16);
+}
+
+/* The second variant, sitting in the notes row: same 12px step below the price
+   panel that a warning box takes, so the two cards' rows start level. */
+.priceNotes .offerRow {
+  margin-top: 12px;
+}
+
+/* Warnings and notes, in the row between the price and the button. Empty on the
+   cards that carry neither — the track still reserves the tallest card's
+   height, which is what lines the four buttons up. */
+.priceNotes {
+  display: flex;
+  flex-direction: column;
+}
+
+.offerLabel {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pink-700);
+}
+
+.offerPrices {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.was {
+  color: #b58aa5;
+  font-size: 0.88rem;
+  text-decoration: line-through;
+}
+
+.offerBig {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--plum);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+
+/* An exclusion the customer must not walk past — deliberately NOT pink: on a
+   card that is pink from edge to edge, brand colour reads as decoration. */
+.warning {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #f6c99a;
+  border-left: 3px solid #e08a2e;
+  background: #fff7ec;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #8a4b12;
+}
+
+.note {
+  margin-top: 12px;
+  font-size: 0.78rem;
+  font-style: italic;
+  line-height: 1.35;
+  text-align: center;
+  color: #a06f8d;
+}
+
+.cta {
+  margin-top: 14px;
+  width: 100%;
+  justify-content: center;
+  padding: 12px 18px;
+  font-size: 0.94rem;
+  white-space: normal;
+}
+
+/* ---------- what's included ---------- */
+/* Below a hairline divider, like the feature list on the plan cards this is
+   modelled on. It takes the leftover height so cards of the same row end level
+   however many services they list. */
+.included {
+  min-height: 0;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--pink-200);
+  display: flex;
+  flex-direction: column;
+}
+
+.includedHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 11px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--pink-700);
+}
+
+.includedCount {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--pink-100);
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+}
+
+.popular .includedCount {
+  background: var(--pink-200);
+}
+
+.includedGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  align-content: start;
+}
+
+.includedItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.tick {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink-400), var(--pink-600));
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+/* Signpost between the packages and the à-la-carte pickers. Sits on the pink
+   tint rather than in a card of its own, so it reads as a sentence joining the
+   two blocks instead of a fifth package. */
+.moreBelow {
+  max-width: 620px;
+  margin: 30px auto 0;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--pink-50);
+  border: 1px solid var(--pink-200);
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--pink-700);
+}
+
+@media (max-width: 620px) {
+  .moreBelow {
+    border-radius: 16px;
+    font-size: 0.86rem;
+  }
 }
 
 /* ---------- the two à-la-carte cards ---------- */
 /* Same shell for both; only the skin differs. They used to be a white card and
    a full-width plum band with different heads, paddings and list layouts, which
    is why the pair never looked related. */
+/* Split by how much each card has to say: spa holds 3 services, trims/cuts/
+   colour holds 9, so the row is thirds — one for spa, two for trims. The wider
+   card then lays its services out two-up (see .pickListTwo), which brings it
+   from nine rows down to five and makes the two cards close enough in height
+   that stretching them to a shared top and bottom edge no longer leaves the
+   spa card with a hole in it. */
+.extras {
+  max-width: 1280px;
+  margin: 46px auto 0;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
 .pickCard {
   display: flex;
   flex-direction: column;
@@ -41,6 +456,15 @@
   color: var(--plum);
 }
 
+/* Caps for the card only — same treatment as the package titles, and for the
+   same reason it lives in CSS there: the words themselves stay Title Case.
+   A touch smaller and tracked out, because caps run wider. */
+.capsHead {
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .pickCardDark .pickHead h3 {
   color: #fff;
 }
@@ -59,346 +483,12 @@
   background: rgba(255, 255, 255, 0.18);
 }
 
-.card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border: 1px solid var(--pink-100);
-  border-radius: var(--radius);
-  padding: 28px 26px;
-  box-shadow: 0 24px 50px -36px rgba(255, 105, 180, 0.4);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-}
-
-.card:hover {
-  transform: translateY(-6px);
-  border-color: var(--pink-300);
-  box-shadow: 0 34px 66px -30px rgba(255, 105, 180, 0.55);
-}
-
-.popular {
-  border: 2px solid var(--pink-400);
-  background: linear-gradient(180deg, #fff, var(--pink-50));
-}
-
-/* ---------- a package card sitting in the conveyor ---------- */
-/* Every slide is the same fixed size, so the card fills it and the long
-   "what's included" list scrolls inside rather than stretching the card —
-   ragged card heights were the mess this replaced. */
-.slideCard {
-  height: 100%;
-  padding: 26px 24px 22px;
-}
-
-/* The conveyor owns all movement; a hover lift here would fight it. */
-.slideCard:hover {
-  transform: none;
-  border-color: var(--pink-100);
-  box-shadow: 0 24px 50px -36px rgba(255, 105, 180, 0.4);
-}
-.slideCard.popular:hover {
-  border-color: var(--pink-400);
-}
-
-.slideCard .footer {
-  padding-top: 16px;
-}
-
-/* ---------- what's included ---------- */
-/* Two columns of short ticked lines: the longest package (11 items) fits in six
-   rows, so nothing is hidden behind a scrollbar. Cards keep one fixed height, so
-   the shorter packages simply leave room above the offer box — which also lines
-   every "Book this package" button up along the same baseline. */
-.included {
-  /* Takes all the height the offer box and button don't need, so a short list
-     fills its card instead of leaving a hole above the price. */
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  border-radius: 14px;
-  border: 1px solid var(--pink-100);
-  overflow: hidden;
-}
-
-.includedHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex: none;
-  padding: 9px 14px;
-  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.includedCount {
-  flex: none;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  font-size: 0.63rem;
-  letter-spacing: 0.06em;
-}
-
-.includedGrid {
-  list-style: none;
-  margin: 0;
-  padding: 12px;
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  /* Spread the rows through the leftover height rather than bunching them at
-     the top under a band of empty pink. */
-  align-content: space-evenly;
-  background: var(--pink-50);
-  /* Safety net, not the plan: the card height floor + the short-screen rules
-     below are sized so every package fits. If an unusual window still overflows,
-     degrade to a scroll rather than silently cutting services off the bottom. */
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-/* 7+ services — two compact columns so nothing needs scrolling */
-.twoCol {
-  grid-template-columns: 1fr 1fr;
-  gap: 7px 12px;
-}
-
-/* ≤6 services — full width, roomier type, breathing space between rows */
-.oneCol {
-  grid-template-columns: 1fr;
-  gap: 9px;
-}
-
-.includedItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  font-size: 0.82rem;
-  line-height: 1.35;
-  color: var(--ink);
-}
-
-.oneCol .includedItem {
-  gap: 10px;
-  font-size: 0.95rem;
-}
-
-.oneCol .tick {
-  width: 18px;
-  height: 18px;
-  font-size: 0.68rem;
-  margin-top: 0;
-}
-
-.tick {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 15px;
-  height: 15px;
-  margin-top: 1px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--pink-400), var(--pink-600));
-  color: #fff;
-  font-size: 0.58rem;
-  font-weight: 800;
-}
-
-.badge {
-  position: absolute;
-  top: -13px;
-  left: 26px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #fff;
-  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
-  padding: 6px 14px;
-  border-radius: 999px;
-  box-shadow: 0 10px 24px -10px rgba(255, 105, 180, 0.7);
-}
-
-.cardHead {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.emoji {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
+/* The picker cards keep the roomier emoji tile the package cards gave up. */
+.pickCard .emoji {
   width: 52px;
   height: 52px;
   border-radius: 16px;
   font-size: 1.6rem;
-  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
-}
-
-.cardHead h3 {
-  font-size: 1.22rem;
-  color: var(--plum);
-  line-height: 1.2;
-}
-
-/* One line: label on the left, was-price and offer on the right. The old
-   version stacked the label above a struck-through price with the big number
-   opposite, which was ~70px tall — enough to push the button off a laptop. */
-.offerRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 9px 15px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
-}
-
-.offerPrices {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.offerRow .offerBig {
-  font-size: 1.55rem;
-  line-height: 1.15;
-}
-
-/* ---------- footer / offer ---------- */
-.footer {
-  margin-top: auto;
-  padding-top: 20px;
-}
-
-.offerBox {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
-}
-
-.offerText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.offerLabel {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--pink-700);
-}
-
-.was {
-  color: #b58aa5;
-  font-size: 0.9rem;
-  text-decoration: line-through;
-}
-
-.offerBig {
-  font-size: 1.7rem;
-  font-weight: 800;
-  color: var(--plum);
-  letter-spacing: -0.02em;
-}
-
-/* two-tier offer (with / without knots) — pickable, not just displayed */
-.tiers {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tier {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  text-align: left;
-  font-family: inherit;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 2px solid transparent;
-  background: var(--pink-50);
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.tier:hover {
-  border-color: var(--pink-300);
-}
-
-/* the chosen variant — this is the one the button books */
-.tierOn {
-  border-color: var(--pink-400);
-  background: linear-gradient(135deg, var(--pink-100), var(--pink-200));
-}
-
-.tierBox {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 19px;
-  height: 19px;
-  border-radius: 50%;
-  border: 2px solid var(--pink-300);
-  background: #fff;
-  color: #fff;
-  font-size: 0.62rem;
-  font-weight: 800;
-}
-
-.tierOn .tierBox {
-  background: linear-gradient(135deg, var(--pink-500), var(--pink-700));
-  border-color: transparent;
-}
-
-.tierLabel {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: var(--pink-700);
-}
-
-.tierPrices {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.offer {
-  font-size: 1.28rem;
-  font-weight: 800;
-  color: var(--plum);
-}
-
-.note {
-  margin-top: 14px;
-  font-size: 0.82rem;
-  font-style: italic;
-  color: #a06f8d;
-}
-
-.cta {
-  margin-top: 18px;
-  width: 100%;
-  justify-content: center;
 }
 
 /* white CTA on the dark plum add-ons card */
@@ -419,10 +509,11 @@
   flex-direction: column;
 }
 
-/* ONE column, always. Two columns halved the row width to ~230px, which wrapped
-   "Full body trim / shave (without knots)" onto four lines and shoved the price
-   into the middle of the row. Full-width rows put every price in the same right
-   margin, which is how a price list is meant to scan. */
+/* One column by default — that's what the narrow spa card wants. Two columns
+   were once tried on BOTH cards, back when they were half the row each: it left
+   ~230px per row, wrapped "Full body trim / shave (without knots)" onto four
+   lines and shoved the price into the middle. The trims card is two thirds wide
+   now, so its columns land at ~330px and the rule below is safe there. */
 .pickList {
   list-style: none;
   padding: 0;
@@ -435,6 +526,24 @@
      tried and looked worse — the services stopped reading as one list. */
   justify-content: flex-start;
   gap: 9px;
+}
+
+/* Two-up, for the wide card. `align-content: start` keeps the rows together at
+   the top so the odd one out on the last row doesn't drift; the leftover height
+   stays between the list and the footer, exactly as in the one-column card. */
+.pickListTwo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: start;
+  gap: 9px 12px;
+}
+
+/* Below the breakpoint where .extras stacks, the wide card is full width and
+   two columns still fit. On a phone they don't — one column from here down. */
+@media (max-width: 620px) {
+  .pickListTwo {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .pickRow {
@@ -567,6 +676,22 @@
   justify-content: center;
 }
 
+/* The spa card is a third of the row, so its footer can't hold the total and a
+   210px button side by side — the label ran to the button's edge. Stack them
+   there; the wide card keeps them on one line. Same paddings, same type, same
+   radius either way. */
+.picker:not(.pickerDark) .pickFoot {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.picker:not(.pickerDark) .pickBtn {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+
 .pickBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -639,13 +764,12 @@
   }
 }
 
-/* SHORT screens (a 768px-tall laptop, a small phone) — win the vertical space
-   back from the card's chrome, not from the list. Everything here trims padding
-   and oversized type; the services themselves stay readable. Applies by HEIGHT,
-   so a wide-but-short laptop gets it too — that was the case that broke.
-   The section heading is trimmed here too: on a 768px laptop the eyebrow, the
-   display-size title and a three-line subtitle ate ~330px before the cards even
-   started, which is what pushed the price and the button off the screen. */
+/* SHORT screens (a 768px-tall laptop) — win vertical space back from the card's
+   chrome, not from the list. Everything here trims padding and oversized type;
+   the services themselves stay readable. Applies by HEIGHT, so a wide-but-short
+   laptop gets it too. The section heading is trimmed here as well: on a 768px
+   laptop the eyebrow, the display-size title and a three-line subtitle ate
+   ~330px before the cards even started. */
 @media (max-height: 1000px) {
   .section {
     padding-top: 46px;
@@ -659,126 +783,84 @@
     margin-inline: auto;
     font-size: 0.95rem;
   }
-  .slideCard {
-    padding: 20px 22px 18px;
+  /* Still a clear gap on a short laptop, just a tighter one. */
+  .gridWrap {
+    margin-top: 24px;
   }
-  .slideCard .cardHead {
-    gap: 12px;
-    margin-bottom: 13px;
+  .card {
+    padding: 16px 16px 18px;
   }
-  .slideCard .emoji {
-    width: 44px;
-    height: 44px;
-    font-size: 1.35rem;
-    border-radius: 14px;
+  .badgeRow {
+    min-height: 24px;
+    margin-bottom: 8px;
   }
-  .slideCard .cardHead h3 {
-    font-size: 1.1rem;
+  .emoji {
+    width: 42px;
+    height: 42px;
+    font-size: 1.32rem;
+    border-radius: 13px;
   }
-  .slideCard .includedHead {
-    padding: 7px 12px;
+  .cardHead {
+    gap: 7px;
   }
-  .slideCard .includedGrid {
-    padding: 10px;
+  .cardHead h3 {
+    font-size: 1rem;
   }
-  .slideCard .twoCol {
-    gap: 6px 10px;
-  }
-  .slideCard .includedItem {
-    font-size: 0.79rem;
-  }
-  .slideCard .oneCol .includedItem {
+  .cardHead h3.capsTitle {
     font-size: 0.9rem;
   }
-  .slideCard .offerBox,
-  .slideCard .tier {
-    padding: 10px 14px;
-  }
-  .slideCard .offerBig {
-    font-size: 1.5rem;
-  }
-  .slideCard .note {
-    margin-top: 9px;
-    font-size: 0.76rem;
-  }
-  .slideCard .footer {
-    padding-top: 12px;
-  }
-  .slideCard .cta {
+  .offerRow {
     margin-top: 12px;
+  }
+  .offerBig {
+    font-size: 1.45rem;
+  }
+  .included {
+    margin-top: 14px;
+    padding-top: 11px;
+  }
+  .includedGrid {
+    gap: 7px;
+  }
+  .includedItem {
+    font-size: 0.79rem;
+  }
+  .cta {
+    margin-top: 12px;
+  }
+  /* The warning stays — it's the point of the card. Only its chrome shrinks. */
+  .warning {
+    margin-top: 10px;
+    padding: 7px 9px;
+    font-size: 0.7rem;
+  }
+  .note {
+    margin-top: 10px;
+    font-size: 0.76rem;
   }
 }
 
 /* Shortest laptops (768px): the last few pixels come out of the section's own
-   padding, so the counter keeps its clearance and the list keeps its type. */
+   padding, so the heading keeps its clearance and the list keeps its type. */
 @media (max-height: 800px) {
   .section {
     padding-top: 20px;
   }
 }
 
-/* A phone card is narrower, so the two columns wrap more lines. Buy that space
-   back from the chrome rather than from the list — the list is the point. */
-@media (max-width: 900px) {
-  .slideCard {
-    padding: 20px 18px 18px;
+/* Phone: the card is full width again, so the type can go back up a step —
+   this breakpoint is about touch comfort, not squeezing. */
+@media (max-width: 680px) {
+  .gridWrap {
+    padding: 0 18px;
   }
-  .slideCard .cardHead {
-    gap: 11px;
-    margin-bottom: 14px;
+  .card {
+    padding: 20px 18px 22px;
   }
-  .slideCard .emoji {
-    width: 42px;
-    height: 42px;
-    font-size: 1.3rem;
-    border-radius: 13px;
-  }
-  .slideCard .cardHead h3 {
-    font-size: 1.06rem;
-  }
-  .slideCard .includedGrid {
-    padding: 10px;
-  }
-  .slideCard .twoCol {
-    gap: 6px 9px;
-  }
-  .slideCard .oneCol {
-    gap: 8px;
-  }
-  .slideCard .includedItem {
-    font-size: 0.76rem;
-    gap: 6px;
-  }
-  .slideCard .oneCol .includedItem {
+  .includedItem {
     font-size: 0.88rem;
-    gap: 9px;
   }
-  .slideCard .offerBig {
-    font-size: 1.45rem;
-  }
-  .slideCard .note {
-    margin-top: 10px;
-    font-size: 0.76rem;
-  }
-  .slideCard .cta {
-    margin-top: 12px;
-  }
-}
-
-/* Small handsets (iPhone SE and friends): the two columns land at ~150px, so
-   most service names wrap to two lines. Measured at 375x667 the 11-service
-   package was 32px over — this trims the type once more so it fits whole. */
-@media (max-width: 420px) {
-  .slideCard .twoCol {
-    gap: 5px 8px;
-  }
-  .slideCard .twoCol .includedItem {
-    font-size: 0.73rem;
-    gap: 5px;
-  }
-  .slideCard .twoCol .tick {
-    width: 13px;
-    height: 13px;
-    font-size: 0.52rem;
+  .cta {
+    padding: 14px 20px;
   }
 }

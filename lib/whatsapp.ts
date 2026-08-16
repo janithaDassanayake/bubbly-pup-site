@@ -18,9 +18,19 @@ export function waLink(phone: string, message: string): string {
   return `https://wa.me/${toWaNumber(phone)}?text=${encodeURIComponent(message)}`;
 }
 
+// No owner name: the salon doesn't collect one any more, so every message is
+// addressed to the pet's person by way of the pet. "Hi Coco's owner!" would be
+// worse than no name at all.
+//
+// The pet emoji here is the house paw print, never 🐶 — the owner knows what
+// they booked in, so it carries no information, and a cat owner reading "booking
+// for *Mochi* 🐶" is the one thing it CAN get wrong.
 type MsgCtx = {
   businessName: string;
-  ownerName: string;
+  // The person's own name, when we have one. The forms stopped asking, so most
+  // rows have none — but greeting the ones that DO by name costs nothing and
+  // reads far warmer than the bare "Good news!" everyone else gets.
+  ownerName?: string | null;
   petName: string;
   packageName: string;
   dateLabel: string; // human date
@@ -35,6 +45,10 @@ type MsgCtx = {
 // narrow phone and split into two ragged lines.
 export const RULE = "━━━━━━━━━━━━━━━";
 const header = (businessName: string) => `🐾 *${businessName}* 🐾`;
+
+// " Nimali" when the row carries a name, "" when it doesn't — so the sentence
+// reads naturally either way rather than leaving a gap or a stray comma.
+const greet = (name?: string | null) => (name?.trim() ? ` ${name.trim()}` : "");
 
 // The booking details block, identical in every message that carries it.
 const details = (c: MsgCtx): string[] => [
@@ -51,8 +65,8 @@ export function bookingConfirmationBody(c: MsgCtx): string {
   return [
     header(c.businessName),
     ``,
-    `Hi ${c.ownerName}! 👋`,
-    `We've received your grooming booking for *${c.petName}* 🐶`,
+    `Hi! 👋`,
+    `We've received your grooming booking for *${c.petName}* 🐾`,
     ``,
     ...details(c),
     ``,
@@ -68,15 +82,18 @@ export function appointmentConfirmedBody(c: MsgCtx): string {
   return [
     header(c.businessName),
     ``,
-    `Good news ${c.ownerName}! ✅`,
+    `Good news${greet(c.ownerName)}! ✅`,
     `*${c.petName}*'s grooming appointment is *confirmed*.`,
     ``,
     ...details(c),
     ``,
     `📍 Please arrive a few minutes early.`,
+    // The one thing the customer has to DO before arriving, so it's bolded like
+    // the booking details rather than buried in the closing lines.
+    `🧺 *Kindly bring a towel for your pet.*`,
     `🔄 Need to reschedule? Just reply to this message.`,
     ``,
-    `See you and ${c.petName} soon! 🐶💕`,
+    `See you and ${c.petName} soon! 🐾💕`,
   ].join("\n");
 }
 
@@ -84,12 +101,12 @@ export function appointmentConfirmedBody(c: MsgCtx): string {
 // The review links are the whole point of this message — a happy customer is
 // never closer to leaving a review than right after pickup.
 export function thankYouBody(
-  c: Pick<MsgCtx, "businessName" | "ownerName" | "petName">
+  c: Pick<MsgCtx, "businessName" | "petName">
 ): string {
   return [
     `Thank you for visiting *${c.businessName}* today! 🐾💕`,
     ``,
-    `We hope *${c.petName}* enjoyed the grooming session! 🐶✨`,
+    `We hope *${c.petName}* enjoyed the grooming session! 🐾✨`,
     ``,
     `We'd love to hear about your experience. Your feedback means a lot to us and helps us keep giving the best care to our furry friends. 💗`,
     ``,
@@ -102,7 +119,7 @@ export function thankYouBody(
     `Or simply reply to this message with your feedback 😊`,
     ``,
     `Thank you for choosing *${c.businessName}*! 🐾`,
-    `See you & ${c.petName} again soon! 🐶💕`,
+    `See you & ${c.petName} again soon! 🐾💕`,
   ].join("\n");
 }
 
@@ -110,12 +127,12 @@ export function thankYouBody(
 // themselves ride along as real attachments via the share sheet, so this text
 // is deliberately caption-length — it becomes the caption on the image message.
 export function groomingCompleteBody(
-  c: Pick<MsgCtx, "businessName" | "ownerName" | "petName" | "packageName">
+  c: Pick<MsgCtx, "businessName" | "petName" | "packageName">
 ): string {
   return [
     header(c.businessName),
     ``,
-    `Hi ${c.ownerName}! ${c.petName}'s grooming is all done ✨`,
+    `Hi! *${c.petName}*'s grooming is all done ✨`,
     ``,
     `🧴 *Service:*  ${c.packageName}`,
     `📸 Here's *${c.petName}* before and after!`,

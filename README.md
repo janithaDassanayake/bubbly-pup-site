@@ -25,7 +25,7 @@ npm run start    # serve the production build
 | Problems & things-to-know explainer reels | `components/Explainers.tsx` |
 | Testimonials | `components/Testimonials.tsx` |
 | Booking form → WhatsApp | `components/Booking.tsx` |
-| Footer + floating WhatsApp button | `components/Footer.tsx`, `components/FloatingWhatsApp.tsx` |
+| Footer | `components/Footer.tsx` |
 
 ## Editing content
 

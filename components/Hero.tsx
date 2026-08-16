@@ -218,16 +218,16 @@ export default function Hero() {
       </div>
 
       <div ref={contentRef} className={`container ${styles.content}`}>
-        <span className="eyebrow">🐶 {SITE.city} · Loved by 1000+ pets</span>
+        <span className="eyebrow">🐶🐱 {SITE.city} · Loved by 1000+ pets</span>
         <h1 className={styles.title}>
           Grooming that makes
           <br />
           tails <span className="gradient-text">wag with joy</span>
         </h1>
         <p className={styles.lead}>
-          {SITE.name} pampers your pup with gentle, professional care — spa
-          baths, stylish haircuts &amp; full grooming, finished with a bubbly
-          burst of fresh &amp; fluffy.
+          {SITE.name} pampers your dog or cat with gentle, professional care —
+          spa baths, stylish haircuts &amp; full grooming, finished with a
+          bubbly burst of fresh &amp; fluffy.
         </p>
 
         <div className={styles.groomWrap}>
@@ -276,11 +276,11 @@ export default function Hero() {
           <div className={styles.avatars}>
             <span>🐩</span>
             <span>🐕</span>
-            <span>🐕‍🦺</span>
+            <span>🐱</span>
             <span>🐶</span>
           </div>
           <p>
-            <strong>Happy pups &amp; proud parents</strong>
+            <strong>Happy pets &amp; proud parents</strong>
             <br />
             Slide the handle across to reveal the glow-up ✨
           </p>

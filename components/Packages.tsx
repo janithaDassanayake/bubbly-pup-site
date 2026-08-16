@@ -19,7 +19,7 @@ export default function Packages() {
       <div className="container">
         <div className="center">
           <span className="eyebrow">🛁 Our Services</span>
-          <h2 className="section-title">Grooming packages for every pup</h2>
+          <h2 className="section-title">Grooming packages for every pet</h2>
           <p className="section-sub">
             Pick the perfect pampering plan. Every package comes loaded with{" "}
             <strong>6 free add-on services</strong> — because your best friend

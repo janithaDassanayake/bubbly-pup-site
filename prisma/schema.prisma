@@ -43,7 +43,10 @@ model AddOn {
 // ---------- people & pets ----------
 model Customer {
   id           String        @id @default(cuid())
-  name         String
+  // Optional: the salon stopped asking for a person's name — a customer is
+  // identified by their (unique) phone and their pets. Rows created before that
+  // keep their name and still display it; new ones simply have none.
+  name         String?
   phone        String        @unique
   email        String?
   createdAt    DateTime      @default(now())
@@ -54,6 +57,9 @@ model Customer {
 model Pet {
   id           String        @id @default(cuid())
   name         String
+  species      PetSpecies    @default(DOG)
+  // Dogs only. A cat groom isn't priced or planned by breed, and the list the
+  // booking form offers is dog breeds — so a cat is saved without one.
   breed        String?
   age          String?
   gender       PetGender     @default(UNKNOWN)
@@ -65,29 +71,44 @@ model Pet {
 
 // ---------- appointments ----------
 model Appointment {
-  id            String            @id @default(cuid())
-  code          String            @unique
-  customer      Customer          @relation(fields: [customerId], references: [id])
+  id            String             @id @default(cuid())
+  code          String             @unique
+  customer      Customer           @relation(fields: [customerId], references: [id])
   customerId    String
-  pet           Pet               @relation(fields: [petId], references: [id])
+  pet           Pet                @relation(fields: [petId], references: [id])
   petId         String
-  package       Package           @relation(fields: [packageId], references: [id])
+  package       Package            @relation(fields: [packageId], references: [id])
   packageId     String
-  addOnKeys     String[]          @default([])
-  date          DateTime          @db.Date
+  addOnKeys     String[]           @default([])
+  date          DateTime           @db.Date
   startMin      Int
   endMin        Int
   durationMin   Int
-  status        AppointmentStatus @default(PENDING_CONFIRMATION)
-  priceEstimate Int               @default(0)
+  status        AppointmentStatus  @default(PENDING_CONFIRMATION)
+  // Where the booking came from. ONLINE is the customer's own reservation made
+  // on the website; WALK_IN is everything the salon entered itself — someone at
+  // the counter, or a call-in typed on an admin form. Default ONLINE so the
+  // public API needs no extra field, and so rows written before this column
+  // existed read as reservations unless the backfill found an admin-create
+  // audit entry for them.
+  source        AppointmentSource  @default(ONLINE)
+  priceEstimate Int                @default(0)
+  // Manual price adjustment set by the admin on Edit appointment: a discount, or
+  // extra charged for extra work/time. NULL means "no override" — the visit is
+  // worth `priceEstimate`. Kept beside the calculated price rather than
+  // overwriting it, so the original quote stays readable and lib/price-audit.ts
+  // keeps checking the calculation, not the owner's decision.
+  priceOverride Int?
   notes         String?
   payment       Payment?
   notifications Notification[]
   photos        AppointmentPhoto[]
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   @@index([date, status])
+  // Reports read a date range and split it by where the booking came from.
+  @@index([date, source])
 }
 
 // Before/after grooming photos. The image itself lives in S3 (private bucket);
@@ -154,14 +175,14 @@ model Settings {
 }
 
 model AdminUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String   @default("Admin")
+  id                 String               @id @default(cuid())
+  email              String               @unique
+  passwordHash       String
+  name               String               @default("Admin")
   // "owner" (the salon owner — the only role that can manage logins) or "staff".
   // See lib/roles.ts. New accounts are staff; the owner is seeded.
-  role         String   @default("staff")
-  createdAt    DateTime @default(now())
+  role               String               @default("staff")
+  createdAt          DateTime             @default(now())
   // Set when an admin is created with a temporary password: the owner must
   // replace it before reaching any admin page.
   mustChangePassword Boolean              @default(false)
@@ -208,6 +229,16 @@ enum AppointmentStatus {
   COMPLETED
 }
 
+// ONLINE  — the customer reserved the slot themselves on the website.
+// WALK_IN — the salon entered it: a customer at the counter, or a booking taken
+//           over the phone. One bucket on purpose — the spec asks the day list
+//           to answer "did this come to us, or did we take it?", and from the
+//           salon's side a call-in is the same answer as a walk-in.
+enum AppointmentSource {
+  ONLINE
+  WALK_IN
+}
+
 enum PhotoKind {
   BEFORE
   AFTER
@@ -242,4 +273,11 @@ enum PetGender {
   MALE
   FEMALE
   UNKNOWN
+}
+
+// DOG is the default because every pet booked before the salon took cats was
+// one — the form offered nothing else — so existing rows backfill correctly.
+enum PetSpecies {
+  DOG
+  CAT
 }

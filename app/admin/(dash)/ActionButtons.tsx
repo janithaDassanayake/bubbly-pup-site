@@ -3,7 +3,12 @@ import { useState, useTransition } from "react";
 import { AppointmentStatus, PaymentMethod } from "@prisma/client";
 import { STATUS_LABEL, TRANSITIONS } from "@/lib/status";
 import { formatLKR } from "@/lib/format";
-import { changeStatus, recordPayment, markNotificationSent } from "../actions";
+import {
+  changeStatus,
+  recordPayment,
+  markNotificationSent,
+  deleteAppointment,
+} from "../actions";
 
 const isMobile = () =>
   typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -45,7 +50,7 @@ export function StatusActions({
   only,
   autoSend,
   waPreview,
-  priceEstimate = 0,
+  finalPrice = 0,
   paidAmount,
 }: {
   id: string;
@@ -55,8 +60,8 @@ export function StatusActions({
   // Message text known up-front, so mobile can open WhatsApp inside the click
   // gesture instead of after the server round-trip (which mobile blocks).
   waPreview?: Partial<Record<AppointmentStatus, string>>;
-  /** what the booking was quoted — the amount box starts here */
-  priceEstimate?: number;
+  /** what the visit costs after any manual adjustment — the amount box starts here */
+  finalPrice?: number;
   /** already settled? then don't ask for the money again */
   paidAmount?: number | null;
 }) {
@@ -66,7 +71,7 @@ export function StatusActions({
   // Set while the "Paid & Completed" popup is open, holding the transition it
   // will run once the amount is confirmed.
   const [payFor, setPayFor] = useState<AppointmentStatus | null>(null);
-  const [amount, setAmount] = useState(String(paidAmount ?? priceEstimate ?? ""));
+  const [amount, setAmount] = useState(String(paidAmount ?? finalPrice ?? ""));
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   let next = TRANSITIONS[status];
   if (only) next = next.filter((s) => only.includes(s));
@@ -167,7 +172,7 @@ export function StatusActions({
           <div className="adm-modal" onClick={(e) => e.stopPropagation()}>
             <h3>💰 Payment received</h3>
             <p className="adm-note" style={{ marginTop: 4 }}>
-              Quoted {formatLKR(priceEstimate)}. Enter what was actually taken — the
+              Quoted {formatLKR(finalPrice)}. Enter what was actually taken — the
               thank-you message opens next.
             </p>
 
@@ -329,5 +334,92 @@ export function SendWhatsApp({
         </span>
       )}
     </span>
+  );
+}
+
+// Remove the booking entirely. Offered at every status — the row this is for is
+// one that shouldn't be on the list at all. One tap asks, the second deletes;
+// the in-page dialog is used rather than window.confirm because a native prompt
+// is easy to dismiss by reflex and this can't be undone.
+export function DeleteAppointment({ id, code }: { id: string; code: string }) {
+  const [pending, start] = useTransition();
+  const [asking, setAsking] = useState(false);
+  const [err, setErr] = useState("");
+  // The row disappears on the server refresh; until it does, keep the button
+  // dead so a second tap can't fire a delete at an id that's already gone.
+  const [gone, setGone] = useState(false);
+
+  const remove = () => {
+    start(async () => {
+      setErr("");
+      let r: Awaited<ReturnType<typeof deleteAppointment>>;
+      try {
+        r = await deleteAppointment(id);
+      } catch {
+        setErr("Couldn't reach the server. Refresh to check.");
+        return;
+      }
+      if (!r.ok) {
+        setErr(r.error ?? "Couldn't delete it.");
+        return;
+      }
+      setGone(true);
+      setAsking(false);
+    });
+  };
+
+  return (
+    <>
+      <button
+        className="adm-btn adm-btn-sm adm-btn-danger"
+        onClick={() => setAsking(true)}
+        disabled={pending || gone}
+      >
+        🗑️ {gone ? "Removed" : "Remove"}
+      </button>
+      {err && (
+        <span className="adm-note" style={{ color: "#c0392b" }}>
+          {err}
+        </span>
+      )}
+
+      {asking && (
+        <div
+          className="adm-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Delete this appointment"
+          onClick={() => setAsking(false)}
+        >
+          <div className="adm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>🗑️ Delete this record?</h3>
+            <p className="adm-note" style={{ marginTop: 4 }}>
+              <strong>{code}</strong> will be removed permanently, along with its
+              photos and any message still waiting to be sent. This can&apos;t be
+              undone.
+            </p>
+            <div className="adm-btn-row" style={{ marginTop: 16 }}>
+              <button
+                type="button"
+                className="adm-btn adm-btn-sm"
+                onClick={() => setAsking(false)}
+                disabled={pending}
+              >
+                Keep it
+              </button>
+              <button
+                type="button"
+                className="adm-btn adm-btn-sm adm-btn-danger"
+                onClick={remove}
+                disabled={pending}
+                autoFocus
+              >
+                {pending ? "Deleting…" : "Yes, delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

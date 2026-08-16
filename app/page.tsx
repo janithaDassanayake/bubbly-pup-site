@@ -8,7 +8,6 @@ import Explainers from "@/components/Explainers";
 import Testimonials from "@/components/Testimonials";
 import Booking from "@/components/Booking";
 import Footer from "@/components/Footer";
-import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import LocalBusinessJsonLd from "@/components/LocalBusinessJsonLd";
 import { salonNow } from "@/lib/time";
 import { getPricingView } from "@/lib/pricing";
@@ -44,7 +43,6 @@ export default async function Home() {
         />
       </main>
       <Footer />
-      <FloatingWhatsApp />
     </>
   );
 }

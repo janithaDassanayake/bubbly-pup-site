@@ -48,7 +48,7 @@ only where interaction demands it (booking form, admin action buttons, filters).
 
 **Customer components** (`components/`): `Hero`, `Packages`, `PriceList`,
 `HowWeGroom`, `ValueProps`, `Explainers`, `Testimonials`, `StorePromo`,
-`Footer`, `Navbar`, `FloatingWhatsApp`, and `Booking` — the reservation form.
+`Footer`, `Navbar`, and `Booking` — the reservation form.
 
 ### Reservation form rules
 

@@ -16,6 +16,7 @@ import {
   EXTRA_SERVICES,
   PRICE_PACKAGES,
   SINGLE_SERVICE,
+  SPA_OPTION,
   SPA_SERVICES,
   formatLKR,
   packageOptionNames,
@@ -80,7 +81,7 @@ export async function getPricingView(): Promise<PricingView> {
       addOns: [...extras, ...spa],
       bookingOptions: [
         ...packages.flatMap(packageOptionNames),
-        ...(spa.length ? ["Spa Treatments"] : []),
+        ...(spa.length ? [SPA_OPTION] : []),
         ...(extras.length || spa.length ? [SINGLE_SERVICE] : []),
       ],
       live: true,

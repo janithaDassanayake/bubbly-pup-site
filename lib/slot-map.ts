@@ -2,17 +2,19 @@
 // and which slots are actually free. Reads the SAME business rules and the same
 // "which statuses release a slot" rule as the public booking APIs, so the admin
 // map can never disagree with what a customer is offered.
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentStatus, type PetSpecies } from "@prisma/client";
 import { prisma } from "./db";
+import { formatPhone } from "./phone";
 import { dateOnly, toDateISO, addDaysISO, salonNow } from "./time";
 import { getSettings, toBusinessRules, RELEASED_STATUSES } from "./settings";
 import {
   buildDayTimeline,
-  generateSlotGrid,
+  to12h,
   toMinutes,
   type DayTimeline,
   type Interval,
 } from "./booking-engine";
+import { buildSlots, slotGrid, slotOccupancy } from "./booking-slots";
 
 // Shaped as an Interval so the pure engine can work with it directly.
 export type SlotBooking = Interval & {
@@ -22,12 +24,25 @@ export type SlotBooking = Interval & {
   customer: string;
   phone: string;
   pet: string;
+  petSpecies: PetSpecies;
   pkg: string;
   durationMin: number;
 };
 
+/** One bookable start time — the unit the salon sells, one client each. */
+export type DaySlot = {
+  min: number; // 540
+  label: string; // "09:00 AM"
+  taken: boolean;
+  reason?: "booked" | "passed";
+  /** who holds it — more than one only if capacity was raised above 1 */
+  bookings: SlotBooking[];
+};
+
 export type DaySlotMap = {
   dateISO: string;
+  /** the six start times, each with its own capacity */
+  slots: DaySlot[];
   timeline: DayTimeline<SlotBooking>;
   /** cancelled / no-show bookings — their time is free again (SRS §9) */
   released: SlotBooking[];
@@ -60,7 +75,7 @@ const APPT_SELECT = {
   endMin: true,
   durationMin: true,
   customer: { select: { name: true, phone: true } },
-  pet: { select: { name: true } },
+  pet: { select: { name: true, species: true } },
   package: { select: { name: true, startGapMin: true } },
 } as const;
 
@@ -71,8 +86,8 @@ type ApptRow = {
   startMin: number;
   endMin: number;
   durationMin: number;
-  customer: { name: string; phone: string };
-  pet: { name: string };
+  customer: { name: string | null; phone: string };
+  pet: { name: string; species: PetSpecies };
   package: { name: string; startGapMin: number };
 };
 
@@ -84,9 +99,12 @@ const toBooking = (a: ApptRow): SlotBooking => ({
   end: a.endMin,
   gapMin: a.package.startGapMin,
   durationMin: a.durationMin,
-  customer: a.customer.name,
+  // No name is collected any more — the strip identifies a booking by its pet
+  // (shown beside this) and falls back to the number rather than an empty gap.
+  customer: a.customer.name || formatPhone(a.customer.phone),
   phone: a.customer.phone,
   pet: a.pet.name,
+  petSpecies: a.pet.species,
   pkg: a.package.name,
 });
 
@@ -124,10 +142,11 @@ export async function daySlotMap(
   if (opts.packageKey) {
     const pkg = await prisma.package.findUnique({ where: { key: opts.packageKey } });
     if (pkg) {
-      const free = generateSlotGrid({
+      // Every service sees the same starts now — it takes one of the period's
+      // two places whatever its length — but the overlay stays because the
+      // admin still asks "where could I put this booking today?".
+      const free = slotGrid({
         dateISO,
-        durationMin: pkg.durationMin,
-        gapMin: pkg.startGapMin,
         rules,
         existing: active,
         nowMin,
@@ -141,8 +160,30 @@ export async function daySlotMap(
     }
   }
 
+  // What the salon sells: six independent start times, one client each. Built
+  // from the SAME grid the customer's form is served, so the two can't disagree.
+  const grid = slotGrid({
+    dateISO,
+    rules,
+    existing: active,
+    nowMin,
+    todayISO: now.dateISO,
+  });
+  const gridByStart = new Map(grid.map((s) => [toMinutes(s.value), s]));
+  const slots: DaySlot[] = buildSlots(rules).map((min) => {
+    const cell = gridByStart.get(min);
+    return {
+      min,
+      label: to12h(min),
+      taken: cell?.taken ?? true,
+      reason: cell?.reason,
+      bookings: active.filter((b) => b.start === min),
+    };
+  });
+
   return {
     dateISO,
+    slots,
     timeline,
     released,
     counts: {
@@ -210,24 +251,38 @@ export async function rangeSlotSummary(fromISO: string, days: number): Promise<D
   return Array.from({ length: days }, (_, i) => {
     const dateISO = addDaysISO(fromISO, i);
     const existing = byDay.get(dateISO) ?? [];
+    const dayNowMin = dateISO === now.dateISO ? now.nowMin : undefined;
+    // Closed/holiday still comes from the timeline — it owns those rules — but
+    // the COUNTS are per booking period, so "4 free" on this strip means four
+    // bookable start times, the same four the customer is offered. Counting
+    // half-hour steps here would advertise times that can't be booked at all.
     const t = buildDayTimeline({
       dateISO,
       rules,
       existing,
-      nowMin: dateISO === now.dateISO ? now.nowMin : undefined,
+      nowMin: dayNowMin,
       todayISO: now.dateISO,
     });
-    const full = t.cells.filter((c) => c.full).length;
-    const partial = t.cells.filter((c) => !c.full && c.booked.length > 0).length;
-    const gone = t.cells.filter((c) => c.booked.length === 0 && c.past).length;
+    const daySlots = buildSlots(rules);
+    const counts = slotOccupancy(existing, rules);
+    const grid = t.closed
+      ? []
+      : slotGrid({ dateISO, rules, existing, nowMin: dayNowMin, todayISO: now.dateISO });
+    const full = daySlots.filter((m) => (counts.get(m) ?? 0) >= rules.capacity).length;
+    // With one client per slot there is no half-taken state; kept at 0 so the
+    // shape of DaySummary (and the strip that reads it) stays unchanged.
+    const partial = 0;
+    const gone = grid.filter((s) => s.reason === "passed").length;
     return {
       dateISO,
       closed: t.closed,
       reason: t.reason,
-      total: t.cells.length,
+      // Everything below is counted in START TIMES, never in clock steps, so
+      // this strip agrees with the customer's calendar.
+      total: daySlots.length,
       full,
       partial,
-      free: t.cells.length - full - partial - gone,
+      free: grid.filter((s) => !s.taken).length,
       gone,
       bookings: existing.length,
     };

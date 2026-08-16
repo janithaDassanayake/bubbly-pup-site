@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSettings, toBusinessRules, bookedIntervals } from "@/lib/settings";
-import { generateSlotGrid, to12h, toMinutes } from "@/lib/booking-engine";
+import { to12h, toMinutes } from "@/lib/booking-engine";
+import { slotGrid } from "@/lib/booking-slots";
 import { salonNow } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -37,12 +38,15 @@ export async function GET(req: Request) {
   const nowMin = date === now.dateISO ? now.nowMin : undefined;
 
   // The whole grid, with unavailable times MARKED rather than removed, so the
-  // customer can see the salon is busy at 10:00 instead of wondering why the
+  // customer can see the salon is busy at 11:00 instead of wondering why the
   // time vanished. `slots` stays free-only for anything still reading it.
-  const grid = generateSlotGrid({
+  //
+  // The package no longer narrows availability: every booking takes one of the
+  // two places in its 2-hour period whatever its length, so a 30-minute bath
+  // and a 2-hour groom see exactly the same times. `durationMin` is still
+  // returned — the appointment records it and the admin schedules by it.
+  const grid = slotGrid({
     dateISO: date,
-    durationMin: pkg.durationMin,
-    gapMin: pkg.startGapMin,
     rules,
     existing,
     nowMin,

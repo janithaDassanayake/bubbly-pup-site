@@ -9,7 +9,7 @@ const LINKS = [
   { href: "/admin/appointments", label: "Appointments", glyph: "📅" },
   { href: "/admin/slots", label: "Slot Management", glyph: "🗓️" },
   { href: "/admin/pending", label: "Pending Confirmation", glyph: "📞" },
-  { href: "/admin/customers", label: "Customers & Pets", glyph: "🐶" },
+  { href: "/admin/customers", label: "Customers & Pets", glyph: "🐾" },
   { href: "/admin/payments", label: "Payments", glyph: "💳" },
   { href: "/admin/reports", label: "Reports", glyph: "📈" },
   { href: "/admin/whatsapp", label: "WhatsApp", glyph: "💬" },
