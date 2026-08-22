@@ -130,7 +130,17 @@ export type AddOnCategory =
   | "nails"
   | "ears"
   | "teeth"
-  | "perfume";
+  | "perfume"
+  // Sold on their own, not part of the shared care set: a cat trim, a cat bath,
+  // and the dog hygiene trim. Each has its own category so a package can hide
+  // exactly the one it already includes — "cat-bath" is on the cat card, so it
+  // is never sold twice, while "cat-trim" is not and stays available.
+  | "cat-trim"
+  | "cat-bath"
+  | "hygiene";
+// A service only one species can book. Most have none — a nail clip is a nail
+// clip — so the field is optional and "no species" means "offer it to both".
+export type PetSpecies = "dog" | "cat";
 export type ServiceGroup = "addon" | "spa"; // which picker it shows in
 export type AddOn = {
   id: string;
@@ -138,6 +148,9 @@ export type AddOn = {
   price: string;
   category: AddOnCategory;
   group: ServiceGroup;
+  // Set only where the service is meaningless for the other animal — a Cat Full
+  // Trim on a labrador, a dog hygiene trim on a cat.
+  species?: PetSpecies;
 };
 
 // "Rs. 5,000" -> 5000, and back to "Rs. 5,000".
@@ -204,7 +217,10 @@ export const PRICE_PACKAGES: PricePackage[] = [
     // already in the package, so selling it again as an add-on would charge
     // twice for one service. `trim` is deliberately NOT here: the warning says
     // the full-body trim is sold separately.
-    covers: ["bath", "ears", "nails", "teeth", "perfume"],
+    // "hygiene" too: the rows above already trim the sanitary areas and paws, so
+    // the standalone hygiene trim would be charging twice. The cat services are
+    // hidden because this is a dog package, not because it includes them.
+    covers: ["bath", "ears", "nails", "teeth", "perfume", "hygiene", "cat-trim", "cat-bath"],
   },
   {
     id: "wash-basic",
@@ -227,7 +243,9 @@ export const PRICE_PACKAGES: PricePackage[] = [
       "⚠️ PLEASE NOTE: This package does not include a full-body haircut, body trim or body massage.",
     // "Ear / Eyes / Paw Cleaning" covers `ears`. No teeth cleaning on this card,
     // so that one stays sellable as an add-on.
-    covers: ["bath", "ears", "nails", "perfume"],
+    // No sanitary/paw trim on this card, so the Dog Hygiene Trim stays sellable
+    // alongside it; the cat-only services are hidden on a dog package.
+    covers: ["bath", "ears", "nails", "perfume", "cat-trim", "cat-bath"],
   },
   {
     id: "wash-trim",
@@ -262,7 +280,10 @@ export const PRICE_PACKAGES: PricePackage[] = [
     // Already includes a full trim — don't offer it again — plus the bath,
     // nails, ears and perfume listed on its card. No teeth cleaning there, so
     // that stays sellable.
-    covers: ["trim", "bath", "nails", "ears", "perfume"],
+    // A full-body haircut takes the sanitary areas, paw pads and eye area with
+    // it, so the hygiene trim is already in the price. Cat services hidden — dog
+    // package.
+    covers: ["trim", "bath", "nails", "ears", "perfume", "hygiene", "cat-trim", "cat-bath"],
   },
   {
     id: "cat",
@@ -283,7 +304,10 @@ export const PRICE_PACKAGES: PricePackage[] = [
     offer: "Rs. 3,500",
     // Cats aren't offered a full-body trim/shave. Ears and teeth are NOT on the
     // cat card, so both stay available as add-ons.
-    covers: ["trim", "bath", "nails", "perfume"],
+    // "cat-bath" is the Shampoo Bath on this card — never sold twice. "cat-trim"
+    // is deliberately NOT covered: no trim is included here, so a Cat Full Trim
+    // is a real add-on. "hygiene" is the dog trim, not offered on a cat.
+    covers: ["trim", "bath", "nails", "perfume", "cat-bath", "hygiene"],
   },
 ];
 
@@ -321,6 +345,23 @@ export const ADD_ONS: AddOn[] = [
   { id: "ears", label: "Ear Cleaning", price: "Rs. 500", category: "ears", group: "addon" },
   { id: "teeth", label: "Teeth Cleaning", price: "Rs. 450", category: "teeth", group: "addon" },
   { id: "perfume", label: "Perfume Application", price: "Rs. 350", category: "perfume", group: "addon" },
+  // Cat-only trims/baths and the dog hygiene trim. All three are à-la-carte:
+  // they show in the Individual Grooming Services picker and under "Single
+  // service (no package)", and on a package only where it does not already
+  // include them (see each package's `covers`).
+  { id: "cat-trim", label: "Cat Full Trim", price: "Rs. 1,500", category: "cat-trim", group: "addon", species: "cat" },
+  { id: "cat-bath", label: "Cat Bath Only", price: "Rs. 1,500", category: "cat-bath", group: "addon", species: "cat" },
+  {
+    id: "hygiene-trim",
+    // The parenthetical is rendered as a second, smaller line by the price-list
+    // picker (SelectableServices splits on it), so the three areas read as the
+    // detail they are instead of a four-line row.
+    label: "Dog Hygiene Trim (sanitary, paw pads, eye area)",
+    price: "Rs. 1,500",
+    category: "hygiene",
+    group: "addon",
+    species: "dog",
+  },
   { id: "spa-pawbutter", label: "Paw Butter Cream + Massage", price: "Rs. 1,500", category: "spa", group: "spa" },
   { id: "spa-oil", label: "Full Body Oil Massage", price: "Rs. 2,500", category: "spa", group: "spa" },
   { id: "spa-conditioner", label: "Conditioner", price: "Rs. 1,000", category: "spa", group: "spa" },
@@ -392,6 +433,13 @@ export function addOnsFor(packageName: string): AddOn[] {
   const covered = packageForOption(packageName)?.pkg.covers ?? [];
   return EXTRA_SERVICES.filter((a) => !covered.includes(a.category));
 }
+
+// Drop the services the chosen pet cannot have. Pet Type is the FIRST question
+// on the booking form, so by the time the service chips render there is an
+// answer to filter on. "" (nothing picked yet) shows everything — that is the
+// price-list picker, which sells services with no pet in the conversation.
+export const servicesForPet = (list: AddOn[], species: PetSpecies | "") =>
+  species ? list.filter((a) => !a.species || a.species === species) : list;
 
 // Options that ARE the services picked under them — "Spa & Treatments" and
 // "Single service" carry no package of their own, so at least one service has

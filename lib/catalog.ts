@@ -59,6 +59,12 @@ export const CATALOG_ADDONS: CatalogAddOn[] = [
   { key: "ears", name: "Ear Cleaning", price: 500, category: "ears", group: "addon" },
   { key: "teeth", name: "Teeth Cleaning", price: 450, category: "teeth", group: "addon" },
   { key: "perfume", name: "Perfume Application", price: 350, category: "perfume", group: "addon" },
+  // Cat-only services and the dog hygiene trim — sold a la carte. Their own
+  // categories (not "trim"/"bath") so `covers` can keep a cat service off a dog
+  // package, and the hygiene trim off the packages that already trim those areas.
+  { key: "cat-trim", name: "Cat Full Trim", price: 1500, category: "cat-trim", group: "addon" },
+  { key: "cat-bath", name: "Cat Bath Only", price: 1500, category: "cat-bath", group: "addon" },
+  { key: "hygiene-trim", name: "Dog Hygiene Trim (sanitary, paw pads, eye area)", price: 1500, category: "hygiene", group: "addon" },
   { key: "spa-pawbutter", name: "Paw Butter Cream + Massage", price: 1500, category: "spa", group: "spa" },
   { key: "spa-oil", name: "Full Body Oil Massage", price: 2500, category: "spa", group: "spa" },
   { key: "spa-conditioner", name: "Conditioner", price: 1000, category: "spa", group: "spa" },

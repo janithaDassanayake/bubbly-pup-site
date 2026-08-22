@@ -8,6 +8,7 @@ import {
   ADD_ONS,
   addOnsFor,
   isServiceOnlyOption,
+  servicesForPet,
   priceToNumber,
   formatLKR,
   type AddOn,
@@ -29,6 +30,13 @@ type Slot = { value: string; label: string; taken?: boolean; reason?: "booked" |
 // the unanswered state: neither the breed field nor the pet wording below it can
 // be right until the customer has told us which animal is coming.
 type PetType = "" | "Dog" | "Cat";
+
+// The form spells the answer "Dog"/"Cat" because that is what it shows and what
+// the WhatsApp message quotes; a service is tagged in lowercase (lib/data.ts).
+const speciesOf = (t: PetType) => (t === "Dog" ? "dog" : t === "Cat" ? "cat" : "") as
+  | "dog"
+  | "cat"
+  | "";
 
 const PET_TYPES = [
   { value: "Dog", label: "Dog", emoji: "🐶" },
@@ -258,10 +266,20 @@ export default function Booking({
 
   // Switching away from Dog drops any breed already chosen. Keeping it would
   // send a Labrador along with a cat booking — and the field is gone from the
-  // form by then, so nobody could spot it or correct it.
+  // form by then, so nobody could spot it or correct it. It also drops any
+  // service the new pet cannot have: the price list sells "Cat Full Trim" with
+  // no pet in the conversation, so a customer can arrive here with one already
+  // ticked and only then tell us it is a dog.
   const changePetType = (type: Exclude<PetType, "">) => {
     clearNotices();
-    setForm((f) => ({ ...f, petType: type, breed: type === "Dog" ? f.breed : "" }));
+    const forPet = new Set(servicesForPet(services, speciesOf(type)).map((a) => a.id));
+    setForm((f) => ({
+      ...f,
+      petType: type,
+      breed: type === "Dog" ? f.breed : "",
+      addOns: f.addOns.filter((id) => forPet.has(id)),
+    }));
+    setModalAddOns((ids) => ids.filter((id) => forPet.has(id)));
   };
 
   const isDog = form.petType === "Dog";
@@ -272,11 +290,12 @@ export default function Booking({
 
   const isSingle = form.packageId === SINGLE_SERVICE;
   // Single service → every à-la-carte service; a package → its filtered add-ons.
-  const offered = isSingle
-    ? services
-    : form.packageId
-    ? servicesFor(form.packageId)
-    : [];
+  // Either way the chosen pet has the last word — a dog is never offered a Cat
+  // Full Trim, a cat is never offered the dog hygiene trim.
+  const offered = servicesForPet(
+    isSingle ? services : form.packageId ? servicesFor(form.packageId) : [],
+    speciesOf(form.petType)
+  );
 
   // Human label for the chosen slot (API slots store HH:MM but display 12-hour).
   const slotLabel = apiSlots?.find((s) => s.value === form.slot)?.label ?? form.slot;
@@ -857,7 +876,7 @@ export default function Booking({
             <h3 className={styles.modalTitle}>Add some extras?</h3>
             <p className={styles.modalSub}>{modalPkg}</p>
             <div className={styles.modalList}>
-              {servicesFor(modalPkg).map((a) => {
+              {servicesForPet(servicesFor(modalPkg), speciesOf(form.petType)).map((a) => {
                 const on = modalAddOns.includes(a.id);
                 return (
                   <button

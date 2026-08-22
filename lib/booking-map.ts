@@ -17,6 +17,12 @@ const CATEGORY_TO_KEY: Record<string, string> = {
   ears: "care-only",
   teeth: "care-only",
   perfume: "care-only",
+  // A full cat trim is an hour of scissor work, same as a dog trim.
+  "cat-trim": "trim-only",
+  // A cat bath and a hygiene trim are both short — they share the 30-minute
+  // standalone slot rather than blocking an hour of the calendar.
+  "cat-bath": "care-only",
+  hygiene: "care-only",
 };
 
 export function packageKeyForOption(optionName: string, addOnIds: string[]): string | null {
@@ -32,7 +38,8 @@ export function packageKeyForOption(optionName: string, addOnIds: string[]): str
   if (optionName === SINGLE_SERVICE) {
     const chosen = ADD_ONS.filter((a) => addOnIds.includes(a.id));
     if (chosen.some((a) => a.category === "colour")) return "colour-only";
-    if (chosen.some((a) => a.category === "trim" || a.category === "haircut")) return "trim-only";
+    if (chosen.some((a) => a.category === "trim" || a.category === "haircut" || a.category === "cat-trim"))
+      return "trim-only";
     if (chosen.length) return CATEGORY_TO_KEY[chosen[0].category] ?? "spa-only";
     return "spa-only";
   }
